@@ -1,0 +1,1 @@
+web: gunicorn Usend.wsgi --log-file -
