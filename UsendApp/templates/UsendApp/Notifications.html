@@ -1,0 +1,60 @@
+{% extends "UsendApp/Base.html" %}
+{% block title %}Notifications — Usend{% endblock %}
+{% block extra_head %}
+<style>
+  .notif-wrap { max-width: 700px; margin: 60px auto; padding: 0 24px; }
+  .notif-wrap h1 { font-family: var(--font-head); font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 32px; }
+  .notif-list { display: flex; flex-direction: column; gap: 10px; }
+  .notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .notif-item.unread { border-color: var(--orange); background: #fff9f7; }
+  .notif-icon { font-size: 22px; flex-shrink: 0; }
+  .notif-msg { font-size: 14px; color: var(--ink); line-height: 1.6; }
+  .notif-time { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .notif-link { color: var(--orange); text-decoration: none; font-weight: 500; font-size: 13px; }
+  .empty-state { text-align: center; padding: 60px 24px; color: var(--muted); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="notif-wrap">
+  <h1>Notifications</h1>
+  {% if notifications %}
+    <div class="notif-list">
+      {% for n in notifications %}
+      <div class="notif-item {% if not n.is_read %}unread{% endif %}">
+        <div class="notif-icon">
+          {% if n.notif_type == 'price_proposed' %}💰
+          {% elif n.notif_type == 'price_countered' %}🔄
+          {% elif n.notif_type == 'task_accepted' %}✅
+          {% elif n.notif_type == 'task_declined' %}❌
+          {% elif n.notif_type == 'task_completed' %}🏁
+          {% elif n.notif_type == 'payment_received' %}💳
+          {% elif n.notif_type == 'review_received' %}⭐
+          {% else %}🔔{% endif %}
+        </div>
+        <div>
+          <div class="notif-msg">{{ n.message }}</div>
+          <div class="notif-time">{{ n.created_at|timesince }} ago</div>
+          {% if n.task %}
+            <a href="{% url 'task_detail' n.task.id %}" class="notif-link">View errand →</a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">🔔</div>
+      <p>No notifications yet.</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

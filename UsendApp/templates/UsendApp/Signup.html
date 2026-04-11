@@ -1,37 +1,162 @@
-{% extends "UsendApp/base.html" %}
+{% extends "UsendApp/Base.html" %}
 
-{% block title %}Sign Up{% endblock %}
+{% block title %}Sign up — Usend{% endblock %}
+
+{% block extra_head %}
+<style>
+  .auth-wrap {
+    min-height: calc(100vh - 128px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .auth-panel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+  }
+  .auth-form-box { width: 100%; max-width: 420px; }
+  .auth-form-box h1 {
+    font-family: var(--font-head);
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .auth-form-box p.sub { color: var(--muted); font-size: 15px; margin-bottom: 36px; }
+  .auth-aside {
+    background: var(--orange);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    gap: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .auth-aside::before {
+    content:'';
+    position:absolute;
+    top:-80px;right:-80px;
+    width:320px;height:320px;
+    border:50px solid rgba(255,255,255,0.12);
+    border-radius:50%;
+  }
+  .auth-aside::after {
+    content:'';
+    position:absolute;
+    bottom:-60px;left:-60px;
+    width:240px;height:240px;
+    border:40px solid rgba(0,0,0,0.08);
+    border-radius:50%;
+  }
+  .auth-aside-quote {
+    font-family: var(--font-head);
+    font-size: 30px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -1px;
+    line-height: 1.2;
+    max-width: 300px;
+    position: relative; z-index: 2;
+  }
+  .role-cards { display: flex; gap: 12px; margin-bottom: 4px; }
+  .role-card {
+    flex: 1;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.18s;
+    background: var(--white);
+  }
+  .role-card:has(input:checked) {
+    border-color: var(--orange);
+    background: #fff5f0;
+  }
+  .role-card input { display: none; }
+  .role-card-icon { font-size: 24px; margin-bottom: 8px; }
+  .role-card-name { font-family: var(--font-head); font-weight: 700; font-size: 16px; }
+  .role-card-desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .auth-switch { margin-top: 24px; font-size: 14px; color: var(--muted); text-align: center; }
+  .auth-switch a { color: var(--orange); text-decoration: none; font-weight: 500; }
+  .field-error { color: #e53e3e; font-size: 13px; margin-top: 4px; }
+  .form-errors {
+    background: #fff5f5;
+    border: 1px solid #e53e3e;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    color: #e53e3e;
+    font-size: 14px;
+  }
+  @media (max-width: 700px) {
+    .auth-wrap { grid-template-columns: 1fr; }
+    .auth-aside { display: none; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="flex justify-center items-center h-screen">
-    <div class="w-full max-w-md">
-        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <h2 class="text-2xl mb-4 text-center">Sign Up</h2>
-            <form method="post">
-                {% csrf_token %}
-                <div class="mb-4">
-                    <label for="id_username" class="block text-gray-700">Username:</label>
-                    {{ form.username }}
-                </div>
-                <div class="mb-4">
-                    <label for="id_email" class="block text-gray-700">Email:</label>
-                    {{ form.email }}
-                </div>
-                <div class="mb-4">
-                    <label for="id_password1" class="block text-gray-700">Password:</label>
-                    {{ form.password1 }}
-                </div>
-                <div class="mb-4">
-                    <label for="id_password2" class="block text-gray-700">Password confirmation:</label>
-                    {{ form.password2 }}
-                </div>
-                <div class="mb-4">
-                    <label for="id_user_type" class="block text-gray-700">User Type:</label>
-                    {{ form.user_type }}
-                </div>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded w-full">Sign Up</button>
-            </form>
+<div class="auth-wrap">
+  <div class="auth-panel">
+    <div class="auth-form-box">
+      <h1>Create account.</h1>
+      <p class="sub">Join Usend as a client or runner.</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="form-errors">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div class="field">
+          <label class="label">Username</label>
+          {{ form.username }}
+          {% if form.username.errors %}<p class="field-error">{{ form.username.errors|join:", " }}</p>{% endif %}
         </div>
+        <div class="field">
+          <label class="label">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}<p class="field-error">{{ form.email.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label">Password</label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}<p class="field-error">{{ form.password1.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label">Confirm password</label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}<p class="field-error">{{ form.password2.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label">I want to</label>
+          <div class="role-cards">
+            <label class="role-card">
+              <input type="radio" name="user_type" value="client" {% if form.user_type.value == 'client' %}checked{% endif %}>
+              <div class="role-card-icon">📦</div>
+              <div class="role-card-name">Post errands</div>
+              <div class="role-card-desc">I need things done</div>
+            </label>
+            <label class="role-card">
+              <input type="radio" name="user_type" value="runner" {% if form.user_type.value == 'runner' %}checked{% endif %}>
+              <div class="role-card-icon">🏃</div>
+              <div class="role-card-name">Run errands</div>
+              <div class="role-card-desc">I pick up nearby jobs</div>
+            </label>
+          </div>
+          {% if form.user_type.errors %}<p class="field-error">{{ form.user_type.errors|join:", " }}</p>{% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">Create account</button>
+      </form>
+      <div class="auth-switch">Already have an account? <a href="{% url 'login' %}">Log in</a></div>
     </div>
+  </div>
+  <div class="auth-aside">
+    <div class="auth-aside-quote">Pick up jobs.<br>Earn money.<br>Stay local.</div>
+  </div>
 </div>
 {% endblock %}
