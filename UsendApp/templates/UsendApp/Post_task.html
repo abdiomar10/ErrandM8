@@ -1,13 +1,115 @@
-{% extends "UsendApp/base.html" %}
+{% extends "UsendApp/Base.html" %}
 
-{% block title %}Post Task{% endblock %}
+{% block title %}Post an errand — Usend{% endblock %}
+
+{% block extra_head %}
+<style>
+  .form-page {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 32px;
+    max-width: 1000px;
+    margin: 60px auto;
+    padding: 0 24px;
+  }
+  .form-page h1 {
+    font-family: var(--font-head);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .form-page p.sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .form-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .tip-card {
+    background: var(--ink);
+    border-radius: 16px;
+    padding: 28px;
+    color: white;
+    height: fit-content;
+    position: sticky;
+    top: 80px;
+  }
+  .tip-card h3 { font-family: var(--font-head); font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .tip-item { display: flex; gap: 12px; margin-bottom: 16px; font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.6; }
+  .tip-icon { font-size: 18px; flex-shrink: 0; }
+  .loc-hint { font-size: 13px; color: var(--orange); margin-top: 6px; }
+  @media (max-width: 760px) {
+    .form-page { grid-template-columns: 1fr; }
+    .tip-card { display: none; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="text-xl mb-4">Post a New Task</h2>
+<div class="form-page" id="post-task-form">
+  <div>
+    <h1>Post an errand</h1>
+    <p class="sub">Fill in the details and a nearby runner will pick it up.</p>
+    <div class="form-card">
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" id="pickup_latitude" name="pickup_latitude">
+        <input type="hidden" id="pickup_longitude" name="pickup_longitude">
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Post Task</button>
-</form>
+        <div class="field">
+          <label class="label">Errand title</label>
+          <input type="text" name="title" value="{{ form.title.value|default:'' }}" placeholder="e.g. Pick up groceries from Carrefour" required>
+        </div>
+        <div class="field">
+          <label class="label">Category</label>
+          {{ form.category }}
+        </div>
+        <div class="field">
+          <label class="label">Description</label>
+          <textarea name="description" rows="3" placeholder="Describe what needs to be done…">{{ form.description.value|default:'' }}</textarea>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label class="label">Pickup location</label>
+            <input type="text" name="location_from" value="{{ form.location_from.value|default:'' }}" placeholder="e.g. Westlands Mall" required>
+          </div>
+          <div class="field">
+            <label class="label">Drop-off location</label>
+            <input type="text" name="location_to" value="{{ form.location_to.value|default:'' }}" placeholder="e.g. Upper Hill" required>
+          </div>
+        </div>
+        <div class="field">
+          <label class="label">Contact number</label>
+          <input type="text" name="phone_number" value="{{ form.phone_number.value|default:'' }}" placeholder="+254…">
+        </div>
+        <p class="loc-hint" id="location-hint">📍 Capturing your location to find nearby runners…</p>
+        <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:24px;">Post errand</button>
+      </form>
+    </div>
+  </div>
+  <div class="tip-card">
+    <h3>Tips for faster pickup</h3>
+    <div class="tip-item"><span class="tip-icon">📍</span>Be specific about the pickup address — include a landmark.</div>
+    <div class="tip-item"><span class="tip-icon">📞</span>Add your phone number so the runner can call if needed.</div>
+    <div class="tip-item"><span class="tip-icon">⏱</span>Post during peak hours (8am–8pm) for the fastest response.</div>
+    <div class="tip-item"><span class="tip-icon">💬</span>A clear description = fewer back-and-forth messages.</div>
+  </div>
+</div>
+
+<script>
+function getCookie(n){let v=null;document.cookie.split(';').forEach(c=>{const[k,val]=c.trim().split('=');if(k===n)v=decodeURIComponent(val);});return v;}
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    document.getElementById('pickup_latitude').value=pos.coords.latitude;
+    document.getElementById('pickup_longitude').value=pos.coords.longitude;
+    document.getElementById('location-hint').textContent='✓ Location captured — runners within 3km will see this.';
+    document.getElementById('location-hint').style.color='#16a34a';
+  },()=>{
+    document.getElementById('location-hint').textContent='⚠ Could not get location. Runners may not see this nearby.';
+  });
+}
+</script>
 {% endblock %}

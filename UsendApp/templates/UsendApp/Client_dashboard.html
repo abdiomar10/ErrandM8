@@ -1,35 +1,150 @@
-{% extends "UsendApp/base.html" %}
+{% extends "UsendApp/Base.html" %}
 
-{% block title %}Client Dashboard{% endblock %}
+{% block title %}My Errands — Usend{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dash-header {
+    background: var(--ink);
+    padding: 40px 60px 36px;
+  }
+  .dash-header-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .dash-header h1 {
+    font-family: var(--font-head);
+    font-size: 36px;
+    font-weight: 800;
+    color: white;
+    letter-spacing: -1px;
+    margin-bottom: 6px;
+  }
+  .dash-header p { color: rgba(255,255,255,0.45); font-size: 14px; }
+  .dash-body { padding: 48px 60px; max-width: 1100px; margin: 0 auto; }
+
+  .task-grid { display: grid; gap: 16px; }
+  .task-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: start;
+    transition: box-shadow 0.18s;
+  }
+  .task-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  .task-card.highlight { border-color: var(--orange); }
+  .task-title {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task-meta {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    margin-top: 2px;
+  }
+  .task-meta span { display: flex; align-items: center; gap: 5px; }
+  .task-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .task-price-box {
+    background: #fff5f0;
+    border: 1px solid #ffd4bc;
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .task-price-box .price-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--orange); font-weight: 500; }
+  .task-price-box .price-val { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: var(--ink); }
+  .waiting { color: var(--muted); font-size: 13px; font-style: italic; }
+
+  @media (max-width: 700px) {
+    .dash-header { padding: 28px 20px; }
+    .dash-body { padding: 28px 20px; }
+    .task-card { grid-template-columns: 1fr; }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<h2 class="text-xl mb-4">Client Dashboard</h2>
-<a href="{% url 'post_task' %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Post a New Task</a>
+<div class="dash-header">
+  <div class="dash-header-inner">
+    <div>
+      <h1>My errands</h1>
+      <p>Track all the errands you've posted</p>
+    </div>
+    <a href="{% url 'post_task' %}" class="btn btn-primary btn-lg">+ Post errand</a>
+  </div>
+</div>
 
-<h3 class="text-lg mt-4 mb-2">Your Tasks</h3>
-<ul>
-    {% for task in tasks %}
-    <li>
-        <strong>{{ task.title }}</strong><br>
-        {{ task.description }}<br>
-        From: {{ task.location_from }} to {{ task.location_to }}<br>
-        Contact: {{ task.phone_number }}<br>
-        {% if task.proposed_price %}
-            Proposed Price: ${{ task.proposed_price }}<br>
-            {% if task.status == 'Pending Client Approval' %}
-                <a href="{% url 'accept_task' task.id 'accept' %}" class="text-green-500 hover:text-green-700 font-bold">Accept</a> |
-                <a href="{% url 'accept_task' task.id 'decline' %}" class="text-red-500 hover:text-red-700 font-bold">Decline</a>
-            {% elif task.status == 'In Progress' %}
-                Status: In Progress
-            {% elif task.status == 'Completed' %}
-                Status: Completed
-                <a href="{% url 'pay_runner' task.id %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-4 rounded">Pay Runner</a>
+<div class="dash-body">
+  {% if tasks %}
+    <div class="task-grid">
+      {% for task in tasks %}
+      <div class="task-card {% if task.status == 'Pending' and task.runner %}highlight{% endif %}">
+        <div>
+          <div class="task-title">
+            {{ task.title }}
+            {% if task.status == 'Pending' %}
+              {% if task.runner %}<span class="badge badge-progress">Price proposed</span>
+              {% else %}<span class="badge badge-pending">Pending</span>{% endif %}
+            {% elif task.status == 'In Progress' %}<span class="badge badge-progress">In progress</span>
+            {% elif task.status == 'Completed' %}<span class="badge badge-done">Completed</span>
+            {% elif task.status == 'Paid' %}<span class="badge badge-paid">Paid</span>
             {% endif %}
-        {% else %}
-            Waiting for runner to propose price...
-        {% endif %}
-    </li>
-    <hr>
-    {% endfor %}
-</ul>
+          </div>
+          <div class="task-meta">
+            <span>📍 {{ task.location_from }} → {{ task.location_to }}</span>
+            {% if task.phone_number %}<span>📞 {{ task.phone_number }}</span>{% endif %}
+            {% if task.category %}<span>🏷 {{ task.get_category_display }}</span>{% endif %}
+            <span>🕐 {{ task.created_at|date:"M d, H:i" }}</span>
+          </div>
+          <p style="font-size:14px;color:var(--muted);margin-bottom:16px;">{{ task.description }}</p>
+          <div class="task-actions">
+            {% if task.proposed_price and task.status == 'Pending' and task.runner %}
+              <a href="{% url 'accept_task' task.id 'accept' %}" class="btn btn-success btn-sm">✓ Accept price</a>
+              <a href="{% url 'accept_task' task.id 'decline' %}" class="btn btn-danger btn-sm">✗ Decline</a>
+            {% elif task.status == 'Completed' %}
+              <a href="{% url 'pay_runner' task.id %}" class="btn btn-primary btn-sm">Pay runner</a>
+            {% elif task.status == 'Paid' and task.can_review %}
+              <a href="{% url 'leave_review' task.id %}" class="btn btn-outline btn-sm">⭐ Leave review</a>
+            {% endif %}
+          </div>
+        </div>
+        <div>
+          {% if task.proposed_price %}
+            <div class="task-price-box">
+              <div class="price-label">Proposed</div>
+              <div class="price-val">KSh {{ task.proposed_price }}</div>
+            </div>
+          {% else %}
+            <div class="waiting">Waiting for runner…</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No errands yet. Post your first one!</p>
+      <a href="{% url 'post_task' %}" class="btn btn-primary" style="margin-top:20px;">Post an errand</a>
+    </div>
+  {% endif %}
+</div>
 {% endblock %}

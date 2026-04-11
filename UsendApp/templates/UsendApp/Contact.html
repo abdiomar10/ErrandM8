@@ -1,9 +1,34 @@
-{% extends "UsendApp/base.html" %}
-
-{% block title %}Contact Us{% endblock %}
-
+{% extends "UsendApp/Base.html" %}
+{% block title %}Contact — Usend{% endblock %}
+{% block extra_head %}
+<style>
+  .contact-wrap{max-width:700px;margin:80px auto;padding:0 24px;}
+  .contact-wrap h1{font-family:var(--font-head);font-size:40px;font-weight:800;letter-spacing:-1px;margin-bottom:8px;}
+  .contact-wrap p.sub{color:var(--muted);font-size:15px;margin-bottom:40px;}
+  .contact-cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .contact-card{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:28px;}
+  .contact-card .icon{font-size:28px;margin-bottom:12px;}
+  .contact-card h3{font-family:var(--font-head);font-weight:700;font-size:17px;margin-bottom:6px;}
+  .contact-card a{color:var(--orange);text-decoration:none;font-size:15px;}
+  .contact-card a:hover{text-decoration:underline;}
+  @media(max-width:500px){.contact-cards{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
 {% block content %}
-<h2>Contact Us</h2>
-<p>Phone: +254713453498</p>
-<p>Email: <a href="mailto:info@UsendApp.co.ke">info@UsendApp.co.ke</a></p>
+<div class="contact-wrap">
+  <h1>Get in touch.</h1>
+  <p class="sub">We're based in Nairobi and always happy to hear from you.</p>
+  <div class="contact-cards">
+    <div class="contact-card">
+      <div class="icon">📞</div>
+      <h3>Phone</h3>
+      <a href="tel:+254713453498">+254 713 453 498</a>
+    </div>
+    <div class="contact-card">
+      <div class="icon">✉️</div>
+      <h3>Email</h3>
+      <a href="mailto:info@usendapp.co.ke">info@usendapp.co.ke</a>
+    </div>
+  </div>
+</div>
 {% endblock %}

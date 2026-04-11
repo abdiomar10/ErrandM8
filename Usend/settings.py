@@ -1,18 +1,26 @@
 import os
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w5*(l_s5e2it8%_x37h@9zgjq=c!7fdt5%==4(yh+oflk8lhtw'
+# ─────────────────────────────────────────────────────────────────────────────
+# SECURITY — read from environment, never hardcode
+# Set these in a .env file (use python-decouple or django-environ) or export
+# them in your shell / hosting platform.
+# ─────────────────────────────────────────────────────────────────────────────
+SECRET_KEY = os.environ.get(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-change-me-before-production'  # fallback for local dev only
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
 
-# Application definition
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Apps
+# ─────────────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -38,7 +46,7 @@ ROOT_URLCONF = 'Usend.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -53,8 +61,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Usend.wsgi.application'
 
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# Default: SQLite for local dev. Override DATABASE_URL for production.
+# ─────────────────────────────────────────────────────────────────────────────
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -62,60 +73,81 @@ DATABASES = {
     }
 }
 
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Password validation
-# https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
+# ─────────────────────────────────────────────────────────────────────────────
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
-# https://docs.djangoproject.com/en/3.2/topics/i18n/
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Internationalisation
+# ─────────────────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+TIME_ZONE = 'Africa/Nairobi'   # was UTC — now correct for your users
 USE_I18N = True
-
-USE_L10N = True
-
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.2/howto/static-files/
-# URL prefix for static files
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Static files
+# ─────────────────────────────────────────────────────────────────────────────
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'UsendApp' / 'static']
 
-# The directory where collectstatic will collect static files for deployment
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Additional locations of static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'UsendApp', 'static')]
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
+# ─────────────────────────────────────────────────────────────────────────────
+# Default primary key
+# ─────────────────────────────────────────────────────────────────────────────
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email backend settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'usend@gmail.com'
-EMAIL_HOST_PASSWORD = '12340usender!'
-DEFAULT_FROM_EMAIL = 'usend@gmail.com'
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Email
+# For local dev, use the console backend so you can read reset emails in the
+# terminal without needing SMTP.  Switch to smtp for production.
+# ─────────────────────────────────────────────────────────────────────────────
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@usendapp.co.ke')
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Auth redirects
+# ─────────────────────────────────────────────────────────────────────────────
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'client_dashboard'
+LOGOUT_REDIRECT_URL = 'landing_page'
 CSRF_FAILURE_VIEW = 'UsendApp.views.csrf_failure'
 
-LOGOUT_REDIRECT_URL = 'landing_page'
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Security headers (only enforce in production)
+# ─────────────────────────────────────────────────────────────────────────────
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
