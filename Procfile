@@ -1,1 +1,1 @@
-web: gunicorn Usend.wsgi --log-file -
+web: gunicorn Usend.wsgi:application --log-file -

@@ -18,16 +18,17 @@ from django.conf import settings
 from .forms import (
     CustomUserCreationForm, CustomAuthenticationForm,
     TaskForm, ReviewForm, PriceCounterForm, ProfileForm,
+    OTPForm, PhoneForm,
 )
-from .models import Profile, Task, Review, PriceCounter, Notification
+from .models import Profile, Task, Review, PriceCounter, Notification, ChatMessage
+from .sms import send_otp, send_task_notification, send_sms
 
 
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
 # Helpers
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
 
 def _notify(recipient, notif_type, message, task=None):
-    """Create an in-app notification."""
     Notification.objects.create(
         recipient=recipient,
         notif_type=notif_type,
@@ -35,101 +36,16 @@ def _notify(recipient, notif_type, message, task=None):
         task=task,
     )
 
-
 def _unread_count(user):
     if user.is_authenticated:
         return user.notifications.filter(is_read=False).count()
     return 0
 
-
-# ---------------------------------------------------------------------------
-# Public pages
-# ---------------------------------------------------------------------------
-
-def landing_page(request):
-    if request.user.is_authenticated:
-        return _dashboard_redirect(request.user)
-    return render(request, 'UsendApp/Landing_page.html', {
-        'unread': _unread_count(request.user),
-    })
-
-
-def about(request):
-    return render(request, 'UsendApp/About.html', {
-        'unread': _unread_count(request.user),
-    })
-
-
-def contact(request):
-    return render(request, 'UsendApp/Contact.html', {
-        'unread': _unread_count(request.user),
-    })
-
-
-def terms_and_conditions(request):
-    return render(request, 'UsendApp/Terms_and_conditions.html')
-
-
-def privacy_policy(request):
-    return render(request, 'UsendApp/Privacy_policy.html')
-
-
-def csrf_failure(request, reason=""):
-    return render(request, 'UsendApp/csrf_failure.html', {'reason': reason}, status=403)
-
-
-# ---------------------------------------------------------------------------
-# Auth — Sign up
-# ---------------------------------------------------------------------------
-
-def signup(request):
-    if request.user.is_authenticated:
-        return _dashboard_redirect(request.user)
-    if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            auth_login(request, user)
-            user_type = form.cleaned_data['user_type']
-            profile, _ = Profile.objects.get_or_create(user=user)
-            profile.user_type = user_type
-            profile.save()
-            messages.success(request, f'Welcome to Usend, {user.username}!')
-            return redirect('client_dashboard' if user_type == 'client' else 'runner_dashboard')
-        else:
-            messages.error(request, 'Please fix the errors below.')
-    else:
-        form = CustomUserCreationForm()
-    return render(request, 'UsendApp/Signup.html', {'form': form})
-
-
-# ---------------------------------------------------------------------------
-# Auth — Log in / out
-# ---------------------------------------------------------------------------
-
-def login(request):
-    if request.user.is_authenticated:
-        return _dashboard_redirect(request.user)
-    if request.method == 'POST':
-        form = CustomAuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            auth_login(request, user)
-            messages.success(request, f'Welcome back, {user.username}!')
-            return _dashboard_redirect(user)
-        else:
-            messages.error(request, 'Invalid username or password.')
-    else:
-        form = CustomAuthenticationForm()
-    return render(request, 'UsendApp/Login.html', {'form': form})
-
-
-@login_required
-def logout_view(request):
-    auth_logout(request)
-    messages.success(request, 'You have been logged out.')
-    return redirect('landing_page')
-
+def _ctx(request, extra=None):
+    ctx = {'unread': _unread_count(request.user)}
+    if extra:
+        ctx.update(extra)
+    return ctx
 
 def _dashboard_redirect(user):
     try:
@@ -139,38 +55,232 @@ def _dashboard_redirect(user):
         pass
     return redirect('client_dashboard')
 
+def _sms_if_phone(user, message):
+    try:
+        p = user.profile
+        if p.phone_number and p.phone_verified:
+            send_sms(p.phone_number, message)
+    except Exception:
+        pass
 
-# ---------------------------------------------------------------------------
-# Password reset — full implementation using Django's built-in tokens
-# ---------------------------------------------------------------------------
+
+# ─────────────────────────────────────────────
+# PUBLIC PAGES
+# ─────────────────────────────────────────────
+
+def landing_page(request):
+    if request.user.is_authenticated:
+        return _dashboard_redirect(request.user)
+    return render(request, 'UsendApp/Landing_page.html', _ctx(request))
+
+def about(request):
+    return render(request, 'UsendApp/About.html', _ctx(request))
+
+def contact(request):
+    return render(request, 'UsendApp/Contact.html', _ctx(request))
+
+def terms_and_conditions(request):
+    return render(request, 'UsendApp/Terms_and_conditions.html', _ctx(request))
+
+def privacy_policy(request):
+    return render(request, 'UsendApp/Privacy_policy.html', _ctx(request))
+
+def csrf_failure(request, reason=''):
+    return render(request, 'UsendApp/csrf_failure.html', {'reason': reason}, status=403)
+
+
+# ─────────────────────────────────────────────
+# SIGNUP + OTP
+# ─────────────────────────────────────────────
+
+def signup(request):
+    if request.user.is_authenticated:
+        return _dashboard_redirect(request.user)
+
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            phone = form.cleaned_data['phone_number']
+            user_type = form.cleaned_data['user_type']
+
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.user_type = user_type
+            profile.phone_number = phone
+            profile.save()
+
+            otp = profile.generate_otp()
+            send_otp(phone, otp)
+
+            request.session['pending_user_id'] = user.id
+            request.session['pending_user_type'] = user_type
+
+            messages.info(request, f'We sent a 6-digit code to {phone}.')
+            return redirect('verify_otp')
+
+    else:
+        form = CustomUserCreationForm()
+
+    return render(request, 'UsendApp/Signup.html', _ctx(request, {'form': form}))
+
+
+def verify_otp(request):
+    user_id = request.session.get('pending_user_id')
+    if not user_id:
+        return redirect('signup')
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        form = OTPForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data['otp']
+
+            if user.profile.otp_valid(code):
+                user.profile.phone_verified = True
+                user.profile.otp_code = ''
+                user.profile.save(update_fields=['phone_verified', 'otp_code'])
+
+                auth_login(request, user)
+                del request.session['pending_user_id']
+
+                messages.success(request, 'Phone verified!')
+                return _dashboard_redirect(user)
+
+            messages.error(request, 'Invalid or expired code.')
+
+        if request.POST.get('resend'):
+            otp = user.profile.generate_otp()
+            send_otp(user.profile.phone_number, otp)
+            messages.info(request, 'New code sent.')
+
+    else:
+        form = OTPForm()
+
+    return render(request, 'UsendApp/Verify_otp.html', _ctx(request, {
+        'form': form,
+        'phone': user.profile.phone_number,
+        'user': user,
+    }))
+
+
+def resend_otp(request):
+    user_id = request.session.get('pending_user_id') or (
+        request.user.id if request.user.is_authenticated else None
+    )
+    if not user_id:
+        return redirect('signup')
+
+    user = get_object_or_404(User, id=user_id)
+    otp = user.profile.generate_otp()
+    send_otp(user.profile.phone_number, otp)
+
+    messages.info(request, 'A new code has been sent.')
+    return redirect('verify_otp')
+
+
+# ─────────────────────────────────────────────
+# LOGIN + 2FA
+# ─────────────────────────────────────────────
+
+def login(request):
+    if request.user.is_authenticated:
+        return _dashboard_redirect(request.user)
+
+    if request.method == 'POST':
+        form = CustomAuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+
+            if user.profile.two_fa_enabled and user.profile.phone_verified:
+                otp = user.profile.generate_otp()
+                send_otp(user.profile.phone_number, otp)
+                request.session['twofa_user_id'] = user.id
+                return redirect('two_fa_verify')
+
+            auth_login(request, user)
+            return _dashboard_redirect(user)
+
+    else:
+        form = CustomAuthenticationForm()
+
+    return render(request, 'UsendApp/Login.html', _ctx(request, {'form': form}))
+
+
+def two_fa_verify(request):
+    user_id = request.session.get('twofa_user_id')
+    if not user_id:
+        return redirect('login')
+
+    user = get_object_or_404(User, id=user_id)
+
+    if request.method == 'POST':
+        form = OTPForm(request.POST)
+        if form.is_valid():
+            if user.profile.otp_valid(form.cleaned_data['otp']):
+                user.profile.otp_code = ''
+                user.profile.save(update_fields=['otp_code'])
+
+                auth_login(request, user)
+                del request.session['twofa_user_id']
+
+                return _dashboard_redirect(user)
+
+    else:
+        form = OTPForm()
+
+    return render(request, 'UsendApp/Two_fa.html', _ctx(request, {'form': form}))
+
+
+@login_required
+def logout_view(request):
+    auth_logout(request)
+    return redirect('landing_page')
+
+
+# ─────────────────────────────────────────────
+# 2FA TOGGLE
+# ─────────────────────────────────────────────
+
+@login_required
+@require_POST
+def toggle_two_fa(request):
+    profile = request.user.profile
+
+    if not profile.phone_verified:
+        messages.error(request, 'Verify phone first.')
+        return redirect('profile')
+
+    profile.two_fa_enabled = not profile.two_fa_enabled
+    profile.save(update_fields=['two_fa_enabled'])
+
+    return redirect('profile')
+
+
+# ─────────────────────────────────────────────
+# PASSWORD RESET
+# ─────────────────────────────────────────────
 
 def password_reset(request):
     if request.method == 'POST':
         form = PasswordResetForm(request.POST)
         if form.is_valid():
             email = form.cleaned_data['email']
-            users = User.objects.filter(email__iexact=email, is_active=True)
-            for user in users:
+            for user in User.objects.filter(email__iexact=email, is_active=True):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
-                reset_url = request.build_absolute_uri(
-                    f'/reset/{uid}/{token}/'
-                )
+                reset_url = request.build_absolute_uri(f'/reset/{uid}/{token}/')
+
                 send_mail(
-                    subject='Reset your Usend password',
-                    message=(
-                        f'Hi {user.username},\n\n'
-                        f'Click the link below to reset your password:\n{reset_url}\n\n'
-                        f'If you didn\'t request this, ignore this email.\n\n— The Usend team'
-                    ),
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False,
+                    'Reset password',
+                    f'Reset link: {reset_url}',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
                 )
-            # Always redirect to "done" — don't reveal whether email exists
             return redirect('password_reset_done')
     else:
         form = PasswordResetForm()
+
     return render(request, 'UsendApp/Password_reset.html', {'form': form})
 
 
@@ -182,23 +292,22 @@ def password_reset_confirm(request, uidb64=None, token=None):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+    except Exception:
         user = None
 
-    valid = user is not None and default_token_generator.check_token(user, token)
+    valid = user and default_token_generator.check_token(user, token)
 
     if request.method == 'POST' and valid:
         form = SetPasswordForm(user, request.POST)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Password updated — please log in.')
             return redirect('password_reset_complete')
     else:
         form = SetPasswordForm(user) if valid else None
 
     return render(request, 'UsendApp/Password_confirm.html', {
         'form': form,
-        'valid_link': valid,
+        'valid_link': valid
     })
 
 
@@ -206,151 +315,124 @@ def password_reset_complete(request):
     return render(request, 'UsendApp/Password_reset_complete.html')
 
 
-# ---------------------------------------------------------------------------
-# Location — runner sends GPS coords
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# LOCATION
+# ─────────────────────────────────────────────
 
 @login_required
 @require_POST
 def update_location(request):
-    try:
-        data = json.loads(request.body)
-        lat = float(data['latitude'])
-        lng = float(data['longitude'])
-    except (KeyError, ValueError, json.JSONDecodeError):
-        return JsonResponse({'error': 'Invalid payload'}, status=400)
+    data = json.loads(request.body)
+    lat = float(data['latitude'])
+    lng = float(data['longitude'])
 
-    profile = request.user.profile
-    profile.latitude = lat
-    profile.longitude = lng
-    profile.location_updated_at = timezone.now()
-    profile.save(update_fields=['latitude', 'longitude', 'location_updated_at'])
+    p = request.user.profile
+    p.latitude = lat
+    p.longitude = lng
+    p.location_updated_at = timezone.now()
+    p.is_online = True
+    p.save()
+
     return JsonResponse({'status': 'ok'})
 
 
-# ---------------------------------------------------------------------------
-# Notifications
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# NOTIFICATIONS
+# ─────────────────────────────────────────────
 
 @login_required
 def notifications(request):
-    notifs = request.user.notifications.all()[:50]
+    notifs = request.user.notifications.all()
     request.user.notifications.filter(is_read=False).update(is_read=True)
-    return render(request, 'UsendApp/Notifications.html', {
-        'notifications': notifs,
-        'unread': 0,
-    })
+
+    return render(request, 'UsendApp/Notifications.html', _ctx(request, {
+        'notifications': notifs
+    }))
 
 
 @login_required
-@require_POST
 def mark_notification_read(request, notif_id):
-    request.user.notifications.filter(id=notif_id).update(is_read=True)
+    n = get_object_or_404(Notification, id=notif_id, recipient=request.user)
+    n.is_read = True
+    n.save()
     return JsonResponse({'status': 'ok'})
 
 
-# ---------------------------------------------------------------------------
-# Profile
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# PROFILE
+# ─────────────────────────────────────────────
 
 @login_required
 def profile_view(request, username=None):
-    if username:
-        target_user = get_object_or_404(User, username=username)
-    else:
-        target_user = request.user
+    target_user = get_object_or_404(User, username=username) if username else request.user
 
     profile = target_user.profile
-    reviews_received = target_user.reviews_received.select_related('reviewer', 'task').order_by('-created_at')
+    is_own = target_user == request.user
+
+    reviews = target_user.reviews_received.all().order_by('-created_at')
     tasks_completed = Task.objects.filter(runner=target_user, status='Paid').count()
 
-    is_own = (request.user == target_user)
-
+    form = None
     if is_own and request.method == 'POST':
-        form = ProfileForm(request.POST, instance=profile)
+        form = ProfileForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
             form.save()
-            messages.success(request, 'Profile updated.')
             return redirect('profile')
-    else:
-        form = ProfileForm(instance=profile) if is_own else None
+    elif is_own:
+        form = ProfileForm(instance=profile)
 
-    return render(request, 'UsendApp/Profile.html', {
+    return render(request, 'UsendApp/Profile.html', _ctx(request, {
         'target_user': target_user,
         'profile': profile,
-        'reviews': reviews_received,
-        'tasks_completed': tasks_completed,
         'form': form,
+        'reviews': reviews,
+        'tasks_completed': tasks_completed,
         'is_own': is_own,
-        'unread': _unread_count(request.user),
-    })
+    }))
 
 
-# ---------------------------------------------------------------------------
-# Client dashboard
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# DASHBOARDS
+# ─────────────────────────────────────────────
 
 @login_required
 def client_dashboard(request):
-    if not hasattr(request.user, 'profile'):
-        Profile.objects.create(user=request.user, user_type='client')
+    Profile.objects.get_or_create(user=request.user)
 
-    tasks = Task.objects.filter(client=request.user).prefetch_related('counters').order_by('-created_at')
+    tasks = Task.objects.filter(client=request.user).order_by('-created_at')
 
     for task in tasks:
         task.can_review = (
             task.status == 'Paid'
-            and task.runner is not None
+            and task.runner
             and not Review.objects.filter(task=task, reviewer=request.user).exists()
         )
-        # Latest pending counter on this task (from the runner)
-        task.latest_counter = task.counters.filter(is_accepted=None).order_by('-created_at').first()
+        task.latest_counter = task.counters.order_by('-created_at').first()
 
-    return render(request, 'UsendApp/Client_dashboard.html', {
-        'tasks': tasks,
-        'unread': _unread_count(request.user),
-    })
+    return render(request, 'UsendApp/Client_dashboard.html', _ctx(request, {'tasks': tasks}))
 
-
-# ---------------------------------------------------------------------------
-# Runner dashboard
-# ---------------------------------------------------------------------------
 
 @login_required
 def runner_dashboard(request):
-    if not hasattr(request.user, 'profile'):
-        Profile.objects.create(user=request.user, user_type='runner')
+    profile, _ = Profile.objects.get_or_create(user=request.user)
 
-    profile = request.user.profile
     tasks_pending = Task.nearby_pending(profile, radius_km=3)
-    has_location = profile.latitude is not None
+    tasks_accepted = Task.objects.filter(runner=request.user, status='In Progress')
+    tasks_completed = Task.objects.filter(runner=request.user, status__in=['Completed', 'Paid'])
 
-    tasks_accepted = Task.objects.filter(
-        runner=request.user, status='In Progress'
-    ).prefetch_related('counters')
-
-    tasks_completed = Task.objects.filter(
-        runner=request.user, status__in=['Completed', 'Paid']
-    ).order_by('-updated_at')[:20]
-
-    # Earnings summary
-    paid_tasks = Task.objects.filter(runner=request.user, status='Paid')
-    total_earned = sum(t.proposed_price or 0 for t in paid_tasks)
-
-    return render(request, 'UsendApp/Runner_dashboard.html', {
+    return render(request, 'UsendApp/Runner_dashboard.html', _ctx(request, {
         'tasks_pending': tasks_pending,
         'tasks_accepted': tasks_accepted,
         'tasks_completed': tasks_completed,
-        'has_location': has_location,
-        'total_earned': total_earned,
-        'profile': profile,
-        'unread': _unread_count(request.user),
-    })
+        'has_location': profile.latitude is not None,
+        'runner_lat': profile.latitude,
+        'runner_lng': profile.longitude,
+    }))
 
 
-# ---------------------------------------------------------------------------
-# Errand lifecycle
-# ---------------------------------------------------------------------------
+# ─────────────────────────────────────────────
+# TASK FLOW
+# ─────────────────────────────────────────────
 
 @login_required
 def post_task(request):
@@ -359,55 +441,36 @@ def post_task(request):
         if form.is_valid():
             task = form.save(commit=False)
             task.client = request.user
-
-            # GPS from hidden fields populated by JS geolocation
-            try:
-                task.pickup_latitude = float(request.POST['pickup_latitude']) if request.POST.get('pickup_latitude') else None
-                task.pickup_longitude = float(request.POST['pickup_longitude']) if request.POST.get('pickup_longitude') else None
-            except (ValueError, KeyError):
-                task.pickup_latitude = None
-                task.pickup_longitude = None
-
             task.save()
-            messages.success(request, 'Errand posted! Runners in your area will see it shortly.')
+
+            send_task_notification(task)
             return redirect('client_dashboard')
-        else:
-            messages.error(request, 'Please fix the errors below.')
-    else:
-        form = TaskForm()
-    return render(request, 'UsendApp/Post_task.html', {
-        'form': form,
-        'unread': _unread_count(request.user),
-    })
+
+    return render(request, 'UsendApp/Post_task.html', _ctx(request, {'form': TaskForm()}))
 
 
 @login_required
 def task_detail(request, task_id):
-    """Public task detail — both client and runner can view."""
     task = get_object_or_404(Task, id=task_id)
-    counters = task.counters.select_related('proposed_by').order_by('created_at')
+
+    if request.user not in (task.client, task.runner):
+        return redirect('landing_page')
+
+    messages = task.messages.all()
+    counters = task.counters.all()
     review = getattr(task, 'review', None)
-    return render(request, 'UsendApp/Task_detail.html', {
+
+    return render(request, 'UsendApp/Task_detail.html', _ctx(request, {
         'task': task,
+        'messages': messages,
         'counters': counters,
         'review': review,
-        'unread': _unread_count(request.user),
-    })
+    }))
 
 
 @login_required
 def set_price(request, task_id):
-    """
-    Runner proposes (or counter-proposes) a price for a task.
-    Creates a PriceCounter and sets task.proposed_price + task.runner.
-    """
-    task = get_object_or_404(Task, id=task_id, status='Pending')
-
-    # Only runners can propose prices
-    if request.user.profile.user_type != 'runner':
-        messages.error(request, 'Only runners can propose prices.')
-        return redirect('client_dashboard')
-
+    task = get_object_or_404(Task, id=task_id)
     if request.method == 'POST':
         form = PriceCounterForm(request.POST)
         if form.is_valid():
@@ -416,234 +479,85 @@ def set_price(request, task_id):
             counter.proposed_by = request.user
             counter.save()
 
-            # Update the task with this runner's proposal
-            task.runner = request.user
-            task.proposed_price = counter.amount
-            task.save(update_fields=['runner', 'proposed_price'])
-
-            # Notify the client
-            _notify(
-                recipient=task.client,
-                notif_type='price_proposed',
-                message=f'{request.user.username} proposed KSh {counter.amount} for "{task.title}".',
-                task=task,
-            )
-
-            messages.success(request, 'Price submitted — waiting for the client to respond.')
             return redirect('runner_dashboard')
-    else:
-        form = PriceCounterForm()
-
-    return render(request, 'UsendApp/Set_price.html', {
-        'task': task,
-        'form': form,
-        'unread': _unread_count(request.user),
-    })
+    return render(request, 'UsendApp/Set_price.html', {'form': PriceCounterForm()})
 
 
 @login_required
 def counter_price(request, task_id):
-    """
-    Client counters the runner's proposed price.
-    Creates a new PriceCounter from the client's side.
-    """
     task = get_object_or_404(Task, id=task_id)
-
-    if request.user != task.client:
-        messages.error(request, 'Only the task owner can counter a price.')
-        return redirect('client_dashboard')
-
     if request.method == 'POST':
         form = PriceCounterForm(request.POST)
         if form.is_valid():
             counter = form.save(commit=False)
             counter.task = task
-            counter.proposed_by = request.user
             counter.save()
 
-            # Notify the runner
-            if task.runner:
-                _notify(
-                    recipient=task.runner,
-                    notif_type='price_countered',
-                    message=f'{request.user.username} countered with KSh {counter.amount} for "{task.title}".',
-                    task=task,
-                )
-
-            messages.success(request, 'Counter-offer sent to the runner.')
             return redirect('client_dashboard')
-    else:
-        form = PriceCounterForm()
-
-    return render(request, 'UsendApp/Counter_price.html', {
-        'task': task,
-        'form': form,
-        'unread': _unread_count(request.user),
-    })
+    return render(request, 'UsendApp/Counter_price.html', {'form': PriceCounterForm()})
 
 
 @login_required
 def accept_task(request, task_id, action):
-    """Client accepts or declines the runner's proposed price."""
     task = get_object_or_404(Task, id=task_id)
-
-    if request.user != task.client:
-        messages.error(request, 'Only the task owner can do this.')
-        return redirect('client_dashboard')
-
-    if action == 'accept' and task.runner:
-        # Mark the latest counter as accepted
-        latest = task.counters.filter(is_accepted=None).order_by('-created_at').first()
-        if latest:
-            latest.is_accepted = True
-            latest.save()
-
-        task.status = 'In Progress'
-        task.save(update_fields=['status'])
-
-        _notify(
-            recipient=task.runner,
-            notif_type='task_accepted',
-            message=f'Your price for "{task.title}" was accepted. Get started!',
-            task=task,
-        )
-        messages.success(request, 'Errand accepted! The runner has been notified.')
-
-    elif action == 'decline':
-        # Mark the latest counter as declined and reset the task
-        latest = task.counters.filter(is_accepted=None).order_by('-created_at').first()
-        if latest:
-            latest.is_accepted = False
-            latest.save()
-
-        if task.runner:
-            _notify(
-                recipient=task.runner,
-                notif_type='task_declined',
-                message=f'Your price for "{task.title}" was declined.',
-                task=task,
-            )
-
-        task.runner = None
-        task.proposed_price = None
-        task.status = 'Pending'
-        task.save(update_fields=['runner', 'proposed_price', 'status'])
-        messages.info(request, 'Price declined. The errand is back in the pool for other runners.')
-
+    task.status = 'In Progress' if action == 'accept' else 'Pending'
+    task.save()
     return redirect('client_dashboard')
 
 
 @login_required
 def complete_task(request, task_id):
-    """Runner marks a task as completed."""
-    task = get_object_or_404(Task, id=task_id, status='In Progress')
-
-    if request.user != task.runner:
-        messages.error(request, 'Only the assigned runner can mark this complete.')
-        return redirect('runner_dashboard')
-
+    task = get_object_or_404(Task, id=task_id)
     task.status = 'Completed'
-    task.save(update_fields=['status'])
-
-    _notify(
-        recipient=task.client,
-        notif_type='task_completed',
-        message=f'"{task.title}" has been marked complete. Please pay the runner.',
-        task=task,
-    )
-    messages.success(request, 'Errand marked complete — the client will pay you shortly.')
+    task.save()
     return redirect('runner_dashboard')
 
 
 @login_required
 def pay_runner(request, task_id):
-    """Client confirms payment to the runner."""
-    task = get_object_or_404(Task, id=task_id, status='Completed')
-
-    if request.user != task.client:
-        messages.error(request, 'Only the task owner can confirm payment.')
-        return redirect('client_dashboard')
-
+    task = get_object_or_404(Task, id=task_id)
     task.status = 'Paid'
-    task.save(update_fields=['status'])
-
-    if task.runner:
-        _notify(
-            recipient=task.runner,
-            notif_type='payment_received',
-            message=f'Payment confirmed for "{task.title}". KSh {task.proposed_price} received!',
-            task=task,
-        )
-    messages.success(request, 'Payment confirmed! Please leave the runner a review.')
+    task.save()
     return redirect('client_dashboard')
 
 
 @login_required
 def cancel_task(request, task_id):
-    """Client cancels a pending task."""
     task = get_object_or_404(Task, id=task_id)
-
-    if request.user != task.client:
-        messages.error(request, 'Only the task owner can cancel this errand.')
-        return redirect('client_dashboard')
-
-    if task.status not in ('Pending',):
-        messages.error(request, 'You can only cancel a pending errand.')
-        return redirect('client_dashboard')
-
     task.status = 'Cancelled'
-    task.save(update_fields=['status'])
-
-    if task.runner:
-        _notify(
-            recipient=task.runner,
-            notif_type='task_declined',
-            message=f'The errand "{task.title}" was cancelled by the client.',
-            task=task,
-        )
-
-    messages.success(request, 'Errand cancelled.')
+    task.save()
     return redirect('client_dashboard')
 
 
-# ---------------------------------------------------------------------------
-# Reviews
-# ---------------------------------------------------------------------------
-
 @login_required
 def leave_review(request, task_id):
-    task = get_object_or_404(Task, id=task_id, status='Paid')
-
-    if request.user != task.client:
-        messages.error(request, 'Only the client can leave a review here.')
-        return redirect('client_dashboard')
-
-    if Review.objects.filter(task=task, reviewer=request.user).exists():
-        messages.info(request, 'You have already reviewed this errand.')
-        return redirect('client_dashboard')
-
+    task = get_object_or_404(Task, id=task_id)
     if request.method == 'POST':
         form = ReviewForm(request.POST)
         if form.is_valid():
             review = form.save(commit=False)
             review.task = task
-            review.reviewer = request.user
-            review.reviewee = task.runner
             review.save()
-
-            _notify(
-                recipient=task.runner,
-                notif_type='review_received',
-                message=f'{request.user.username} left you a {review.score}★ review.',
-                task=task,
-            )
-            messages.success(request, 'Review submitted. Thank you!')
             return redirect('client_dashboard')
-    else:
-        form = ReviewForm()
 
-    return render(request, 'UsendApp/Leave_review.html', {
-        'form': form,
-        'task': task,
-        'unread': _unread_count(request.user),
-    })
+
+# ─────────────────────────────────────────────
+# CHAT
+# ─────────────────────────────────────────────
+
+@login_required
+@require_POST
+def send_chat(request, task_id):
+    data = json.loads(request.body)
+    msg = ChatMessage.objects.create(
+        task_id=task_id,
+        sender=request.user,
+        body=data.get('body')
+    )
+    return JsonResponse({'id': msg.id})
+
+
+@login_required
+def poll_chat(request, task_id):
+    msgs = ChatMessage.objects.filter(task_id=task_id)
+    return JsonResponse({'messages': list(msgs.values())})

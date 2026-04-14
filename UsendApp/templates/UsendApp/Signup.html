@@ -43,14 +43,6 @@
     border:50px solid rgba(255,255,255,0.12);
     border-radius:50%;
   }
-  .auth-aside::after {
-    content:'';
-    position:absolute;
-    bottom:-60px;left:-60px;
-    width:240px;height:240px;
-    border:40px solid rgba(0,0,0,0.08);
-    border-radius:50%;
-  }
   .auth-aside-quote {
     font-family: var(--font-head);
     font-size: 30px;
@@ -81,16 +73,17 @@
   .role-card-desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
   .auth-switch { margin-top: 24px; font-size: 14px; color: var(--muted); text-align: center; }
   .auth-switch a { color: var(--orange); text-decoration: none; font-weight: 500; }
-  .field-error { color: #e53e3e; font-size: 13px; margin-top: 4px; }
+  .field-error { color: #e53e3e; font-size: 13px; margin-top: 4px; display: block; }
   .form-errors {
     background: #fff5f5;
     border: 1px solid #e53e3e;
     border-radius: 8px;
-    padding: 12px;
+    padding: 12px 16px;
     margin-bottom: 16px;
-    color: #e53e3e;
+    color: #c62828;
     font-size: 14px;
   }
+  .form-errors ul { margin: 0; padding-left: 16px; }
   @media (max-width: 700px) {
     .auth-wrap { grid-template-columns: 1fr; }
     .auth-aside { display: none; }
@@ -108,46 +101,53 @@
         {% csrf_token %}
 
         {% if form.non_field_errors %}
-          <div class="form-errors">{{ form.non_field_errors }}</div>
+          <div class="form-errors">
+            <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+          </div>
         {% endif %}
 
         <div class="field">
           <label class="label">Username</label>
           {{ form.username }}
-          {% if form.username.errors %}<p class="field-error">{{ form.username.errors|join:", " }}</p>{% endif %}
+          {% if form.username.errors %}<span class="field-error">{{ form.username.errors|join:", " }}</span>{% endif %}
         </div>
         <div class="field">
           <label class="label">Email</label>
           {{ form.email }}
-          {% if form.email.errors %}<p class="field-error">{{ form.email.errors|join:", " }}</p>{% endif %}
+          {% if form.email.errors %}<span class="field-error">{{ form.email.errors|join:", " }}</span>{% endif %}
+        </div>
+        <div class="field">
+          <label class="label">Phone number</label>
+          {{ form.phone_number }}
+          {% if form.phone_number.errors %}<span class="field-error">{{ form.phone_number.errors|join:", " }}</span>{% endif %}
         </div>
         <div class="field">
           <label class="label">Password</label>
           {{ form.password1 }}
-          {% if form.password1.errors %}<p class="field-error">{{ form.password1.errors|join:", " }}</p>{% endif %}
+          {% if form.password1.errors %}<span class="field-error">{{ form.password1.errors|join:", " }}</span>{% endif %}
         </div>
         <div class="field">
           <label class="label">Confirm password</label>
           {{ form.password2 }}
-          {% if form.password2.errors %}<p class="field-error">{{ form.password2.errors|join:", " }}</p>{% endif %}
+          {% if form.password2.errors %}<span class="field-error">{{ form.password2.errors|join:", " }}</span>{% endif %}
         </div>
         <div class="field">
           <label class="label">I want to</label>
           <div class="role-cards">
             <label class="role-card">
-              <input type="radio" name="user_type" value="client" {% if form.user_type.value == 'client' %}checked{% endif %}>
+              <input type="radio" name="user_type" value="client" checked>
               <div class="role-card-icon">📦</div>
               <div class="role-card-name">Post errands</div>
               <div class="role-card-desc">I need things done</div>
             </label>
             <label class="role-card">
-              <input type="radio" name="user_type" value="runner" {% if form.user_type.value == 'runner' %}checked{% endif %}>
+              <input type="radio" name="user_type" value="runner">
               <div class="role-card-icon">🏃</div>
               <div class="role-card-name">Run errands</div>
               <div class="role-card-desc">I pick up nearby jobs</div>
             </label>
           </div>
-          {% if form.user_type.errors %}<p class="field-error">{{ form.user_type.errors|join:", " }}</p>{% endif %}
+          {% if form.user_type.errors %}<span class="field-error">{{ form.user_type.errors|join:", " }}</span>{% endif %}
         </div>
 
         <button type="submit" class="btn btn-primary btn-full btn-lg">Create account</button>

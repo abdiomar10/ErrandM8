@@ -1,37 +1,33 @@
-{% comment %}
-Save this file as Set_price.html
-{% endcomment %}
 {% extends "UsendApp/Base.html" %}
 
 {% block title %}Propose price — Usend{% endblock %}
 
-{% block extra_head %}
-<style>
-  .center-form { max-width: 520px; margin: 80px auto; padding: 0 24px; }
-  .center-form h1 { font-family:var(--font-head);font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px; }
-  .center-form p.sub { color:var(--muted);font-size:14px;margin-bottom:32px; }
-  .task-summary { background:var(--cream);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:28px;font-size:14px; }
-  .task-summary strong { font-family:var(--font-head);font-size:16px;display:block;margin-bottom:6px; }
-  .task-summary span { color:var(--muted); }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="center-form">
   <h1>Propose a price</h1>
-  <p class="sub">The client will accept or decline your proposal.</p>
+
   <div class="task-summary">
     <strong>{{ task.title }}</strong>
     <span>{{ task.location_from }} → {{ task.location_to }}</span>
   </div>
+
   <div class="form-card card">
     <form method="post">
       {% csrf_token %}
+
       <div class="field">
-        <label class="label">Your price (KSh)</label>
-        <input type="number" name="proposed_price" placeholder="e.g. 250" min="0" step="50" required>
+        {{ form.amount.label_tag }}
+        {{ form.amount }}
       </div>
-      <button type="submit" class="btn btn-primary btn-full btn-lg">Submit price</button>
+
+      <div class="field">
+        {{ form.note.label_tag }}
+        {{ form.note }}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg">
+        Submit price
+      </button>
     </form>
   </div>
 </div>
