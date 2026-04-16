@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   {% load static %}
-  <link rel="icon" href="{% static 'images/USEND.png' %}">
-  <title>{% block title %}Usend{% endblock %}</title>
+  <link rel="icon" href="{% static 'images/errandm8.ico' %}">
+  <link rel="apple-touch-icon" href="{% static 'images/errandm8_180x180.png' %}">
+  <title>{% block title %}ErrandM8{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
@@ -53,11 +54,22 @@
       gap: 10px;
       text-decoration: none;
     }
-    .nav-brand img { height: 28px; border-radius: 6px; }
+    .nav-brand .logo-box {
+      width: 32px; height: 32px;
+      background: var(--orange);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 13px;
+      color: white;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
     .nav-brand span {
       font-family: var(--font-head);
       font-weight: 800;
-      font-size: 22px;
+      font-size: 20px;
       color: var(--white);
       letter-spacing: -0.5px;
     }
@@ -81,14 +93,12 @@
     }
     .nav-links a.btn-nav:hover { background: var(--orange2); }
 
-    /* Notification bell */
     .notif-bell {
       position: relative;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 36px;
-      height: 36px;
+      width: 36px; height: 36px;
       border-radius: 8px;
       color: rgba(255,255,255,0.65);
       text-decoration: none;
@@ -103,12 +113,9 @@
       color: white;
       font-size: 10px;
       font-weight: 700;
-      min-width: 16px;
-      height: 16px;
+      min-width: 16px; height: 16px;
       border-radius: 99px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
       padding: 0 4px;
     }
 
@@ -126,7 +133,6 @@
     .msg.info    { background: #e8f4fd; border-color: #1e88e5; color: #1565c0; }
     .msg.warning { background: #fff8e1; border-color: #ffc107; color: #e65100; }
 
-    /* ── MAIN ── */
     main { flex: 1; }
 
     /* ── FOOTER ── */
@@ -148,28 +154,13 @@
 
     /* ── SHARED COMPONENTS ── */
     .page-wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
-    .page-wrap-wide { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 32px;
-    }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; }
 
     .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 22px;
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      text-decoration: none;
-      transition: all 0.18s;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; text-decoration: none; transition: all 0.18s;
     }
     .btn-primary { background: var(--orange); color: var(--white); }
     .btn-primary:hover { background: var(--orange2); transform: translateY(-1px); }
@@ -186,66 +177,25 @@
     .btn-full { width: 100%; justify-content: center; }
 
     .label {
-      display: block;
-      font-size: 13px;
-      font-weight: 500;
-      color: var(--muted);
-      margin-bottom: 6px;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
+      display: block; font-size: 13px; font-weight: 500; color: var(--muted);
+      margin-bottom: 6px; letter-spacing: 0.02em; text-transform: uppercase;
     }
     input[type=text], input[type=email], input[type=password],
     input[type=number], input[type=datetime-local], textarea, select {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-family: var(--font-body);
-      font-size: 15px;
-      background: var(--white);
-      color: var(--ink);
-      transition: border-color 0.18s;
-      outline: none;
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: var(--font-body); font-size: 15px;
+      background: var(--white); color: var(--ink); transition: border-color 0.18s; outline: none;
     }
     input:focus, textarea:focus, select:focus { border-color: var(--orange); }
     .field { margin-bottom: 20px; }
 
-    .badge {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 99px;
-      font-size: 12px;
-      font-weight: 500;
-    }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
     .badge-pending  { background: #fff8e1; color: #b45309; border: 1px solid #fde68a; }
     .badge-progress { background: #e8f4fd; color: #1565c0; border: 1px solid #bfdbfe; }
     .badge-done     { background: #edf7ed; color: #2e7d32; border: 1px solid #b8deba; }
     .badge-paid     { background: #f3f0ff; color: #5b21b6; border: 1px solid #ddd6fe; }
 
-    .section-title {
-      font-family: var(--font-head);
-      font-weight: 700;
-      font-size: 22px;
-      color: var(--ink);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .section-title .count {
-      background: var(--orange);
-      color: white;
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 99px;
-      font-family: var(--font-body);
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 48px 24px;
-      color: var(--muted);
-    }
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
     .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
     .empty-state p { font-size: 15px; }
 
@@ -261,8 +211,8 @@
 <nav class="topnav">
   <a href="{% url 'landing_page' %}" class="nav-brand">
     {% load static %}
-    <img src="{% static 'images/USEND.png' %}" alt="Usend">
-    <span>U<em>send</em></span>
+    <div class="logo-box">M8</div>
+    <span>Errand<em>M8</em></span>
   </a>
   <div class="nav-links">
     <a href="{% url 'landing_page' %}">Home</a>
@@ -302,8 +252,8 @@
 </main>
 
 <footer>
-  <span class="brand-f">U<em>send</em></span>
-  <span>© 2025 Usend. Built for Nairobi.</span>
+  <span class="brand-f">Errand<em>M8</em></span>
+  <span>© 2025 ErrandM8. Built for Nairobi.</span>
   <div>
     <a href="{% url 'terms_and_conditions' %}">Terms</a>
     <a href="{% url 'privacy_policy' %}">Privacy</a>

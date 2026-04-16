@@ -2,8 +2,8 @@
 {% block title %}Notifications — Usend{% endblock %}
 {% block extra_head %}
 <style>
-  .notif-wrap { max-width: 700px; margin: 60px auto; padding: 0 24px; }
-  .notif-wrap h1 { font-family: var(--font-head); font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 32px; }
+  .notif-wrap { max-inline-size: 700px; margin: 60px auto; padding: 0 24px; }
+  .notif-wrap h1 { font-family: var(--font-head); font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-block-end: 32px; }
   .notif-list { display: flex; flex-direction: column; gap: 10px; }
   .notif-item {
     display: flex;
@@ -17,10 +17,10 @@
   .notif-item.unread { border-color: var(--orange); background: #fff9f7; }
   .notif-icon { font-size: 22px; flex-shrink: 0; }
   .notif-msg { font-size: 14px; color: var(--ink); line-height: 1.6; }
-  .notif-time { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .notif-time { font-size: 12px; color: var(--muted); margin-block-start: 4px; }
   .notif-link { color: var(--orange); text-decoration: none; font-weight: 500; font-size: 13px; }
   .empty-state { text-align: center; padding: 60px 24px; color: var(--muted); }
-  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state .icon { font-size: 40px; margin-block-end: 12px; }
 </style>
 {% endblock %}
 {% block content %}

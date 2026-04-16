@@ -1,64 +1,29 @@
 {% extends "UsendApp/Base.html" %}
-
-{% block title %}Runner Dashboard — Usend{% endblock %}
+{% block title %}Concierge Dashboard — ErrandM8{% endblock %}
 
 {% block extra_head %}
 <style>
-  .dash-header {
-    background: var(--ink);
-    padding: 40px 60px 36px;
-  }
-  .dash-header-inner {
-    max-width: 1100px;
-    margin: 0 auto;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
-  .dash-header h1 {
-    font-family: var(--font-head);
-    font-size: 36px;
-    font-weight: 800;
-    color: white;
-    letter-spacing: -1px;
-    margin-bottom: 6px;
-  }
+  .dash-header { background: var(--ink); padding: 40px 60px 36px; }
+  .dash-header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .dash-header h1 { font-family: var(--font-head); font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px; margin-bottom: 6px; }
   .dash-header p { color: rgba(255,255,255,0.45); font-size: 14px; }
   .location-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,0.08);
-    color: rgba(255,255,255,0.7);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 99px;
-    padding: 8px 16px;
-    font-size: 13px;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 99px;
+    padding: 8px 16px; font-size: 13px;
   }
   .location-pill.active { background: rgba(34,197,94,0.15); color: #86efac; border-color: rgba(34,197,94,0.3); }
-  .pulse { width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite; }
+  .pulse { width:8px; height:8px; border-radius:50%; background:currentColor; animation:pulse 1.4s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(0.8)} }
 
   .dash-body { padding: 48px 60px; max-width: 1100px; margin: 0 auto; }
 
-  .tab-bar {
-    display: flex;
-    gap: 0;
-    border-bottom: 2px solid var(--border);
-    margin-bottom: 32px;
-  }
+  .tab-bar { display: flex; border-bottom: 2px solid var(--border); margin-bottom: 32px; }
   .tab {
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--muted);
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -2px;
-    transition: all 0.18s;
-    background: none;
+    padding: 12px 24px; font-size: 14px; font-weight: 500; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: all 0.18s; background: none;
     border-left: none; border-right: none; border-top: none;
     font-family: var(--font-body);
   }
@@ -67,52 +32,19 @@
   .tab-panel.active { display: block; }
 
   .task-grid { display: grid; gap: 16px; }
-  .task-card {
-    background: var(--white);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 24px 28px;
-    transition: box-shadow 0.18s;
-  }
+  .task-card { background: var(--white); border: 1px solid var(--border); border-radius: 16px; padding: 24px 28px; transition: box-shadow 0.18s; }
   .task-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
-  .task-top {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-  .task-title {
-    font-family: var(--font-head);
-    font-size: 18px;
-    font-weight: 700;
-  }
-  .dist-badge {
-    background: var(--cream);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-  .task-meta {
-    font-size: 13px;
-    color: var(--muted);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 14px;
-    margin-bottom: 12px;
-  }
-  .task-desc { font-size: 14px; color: var(--muted); margin-bottom: 18px; }
+  .task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  .task-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; }
+  .dist-badge { background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  .task-meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; }
+  .task-desc { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+
   .price-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .price-form input {
-    width: 140px;
-    padding: 8px 12px;
-    font-size: 14px;
-  }
-  .task-actions { display: flex; gap: 8px; }
+  .price-form input { width: 150px; padding: 8px 12px; font-size: 14px; }
+
+  .budget-hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+  .budget-hint strong { color: var(--orange); }
 
   @media (max-width: 700px) {
     .dash-header { padding: 28px 20px; }
@@ -126,8 +58,8 @@
 <div class="dash-header" id="runner-dashboard">
   <div class="dash-header-inner">
     <div>
-      <h1>Runner dashboard</h1>
-      <p>Jobs within 3km of you — updated when you arrive</p>
+      <h1>Concierge dashboard</h1>
+      <p>Errands within 3km of you — updated on arrival</p>
     </div>
     <div id="location-status" class="location-pill">
       <div class="pulse"></div>
@@ -139,7 +71,8 @@
 <div class="dash-body">
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('available', this)">
-      Available <span style="background:var(--orange);color:white;border-radius:99px;padding:1px 8px;font-size:11px;margin-left:6px;">{{ tasks_pending|length }}</span>
+      Available
+      <span style="background:var(--orange);color:white;border-radius:99px;padding:1px 8px;font-size:11px;margin-left:6px;">{{ tasks_pending|length }}</span>
     </button>
     <button class="tab" onclick="switchTab('accepted', this)">In progress</button>
     <button class="tab" onclick="switchTab('completed', this)">Completed</button>
@@ -158,16 +91,20 @@
         <div class="task-card">
           <div class="task-top">
             <div class="task-title">{{ task.title }}</div>
-            {% if task.distance %}
-              <span class="dist-badge">📍 {{ task.distance }} km away</span>
+            {% if task._distance is not None %}
+              <span class="dist-badge">📍 {{ task._distance }} km away</span>
             {% endif %}
           </div>
           <div class="task-meta">
             <span>📦 {{ task.get_category_display }}</span>
             <span>🗺 {{ task.location_from }} → {{ task.location_to }}</span>
             {% if task.phone_number %}<span>📞 {{ task.phone_number }}</span>{% endif %}
+            {% if task.deadline %}<span>⏰ Due {{ task.deadline|date:"M d, H:i" }}</span>{% endif %}
           </div>
           <p class="task-desc">{{ task.description }}</p>
+          {% if task.client_budget %}
+          <p class="budget-hint">Client's budget: <strong>KSh {{ task.client_budget }}</strong> — propose a fair price below.</p>
+          {% endif %}
           <form method="post" action="{% url 'set_price' task.id %}" class="price-form">
             {% csrf_token %}
             <input type="number" name="proposed_price" placeholder="Your price (KSh)" min="0" step="50" required>
@@ -200,10 +137,13 @@
             <span style="color:var(--orange);font-weight:600;">KSh {{ task.proposed_price }}</span>
           </div>
           <p class="task-desc">{{ task.description }}</p>
-          <form method="post" action="{% url 'complete_task' task.id %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-success btn-sm">✓ Mark complete</button>
-          </form>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <form method="post" action="{% url 'complete_task' task.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-success btn-sm">✓ Mark complete</button>
+            </form>
+            <a href="{% url 'task_detail' task.id %}" class="btn btn-ghost btn-sm">Chat / Details →</a>
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -223,13 +163,13 @@
         <div class="task-card">
           <div class="task-top">
             <div class="task-title">{{ task.title }}</div>
-            <span class="badge badge-done">Completed</span>
+            {% if task.status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+            {% else %}<span class="badge badge-done">Completed</span>{% endif %}
           </div>
           <div class="task-meta">
             <span>🗺 {{ task.location_from }} → {{ task.location_to }}</span>
             <span style="color:var(--orange);font-weight:600;">KSh {{ task.proposed_price }}</span>
           </div>
-          <p class="task-desc">{{ task.description }}</p>
         </div>
         {% endfor %}
       </div>
@@ -250,7 +190,6 @@ function switchTab(id, btn) {
   btn.classList.add('active');
 }
 
-// Location
 function getCookie(n) {
   let v = null;
   document.cookie.split(';').forEach(c => {
@@ -259,9 +198,10 @@ function getCookie(n) {
   });
   return v;
 }
+
 if (navigator.geolocation) {
   navigator.geolocation.getCurrentPosition(pos => {
-    fetch('/update_location/', {
+    fetch('/update-location/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
       body: JSON.stringify({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
@@ -271,8 +211,7 @@ if (navigator.geolocation) {
       el.innerHTML = '<div class="pulse"></div> Location active';
     });
   }, () => {
-    const el = document.getElementById('location-status');
-    el.innerHTML = '⚠ Location off';
+    document.getElementById('location-status').innerHTML = '⚠ Location off — showing all errands';
   });
 }
 </script>
