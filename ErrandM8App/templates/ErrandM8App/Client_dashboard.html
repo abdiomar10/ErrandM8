@@ -1,0 +1,151 @@
+{% extends "ErrandM8App/Base.html" %}
+{% block title %}My Errands — ErrandM8{% endblock %}
+
+{% block extra_head %}
+<style>
+  .dash-header { background: var(--ink); padding: 40px 60px 36px; }
+  .dash-header-inner { max-width: 1100px; margin: 0 auto; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .dash-header h1 { font-family: var(--font-head); font-size: 36px; font-weight: 800; color: white; letter-spacing: -1px; margin-bottom: 6px; }
+  .dash-header p { color: rgba(255,255,255,0.45); font-size: 14px; }
+  .dash-body { padding: 48px 60px; max-width: 1100px; margin: 0 auto; }
+
+  .task-grid { display: grid; gap: 16px; }
+  .task-card {
+    background: var(--white); border: 1px solid var(--border); border-radius: 16px;
+    padding: 24px 28px; transition: box-shadow 0.18s;
+  }
+  .task-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.06); }
+  .task-card.highlight { border-color: var(--orange); }
+
+  .task-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .task-title { font-family: var(--font-head); font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .task-meta { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
+  .task-desc { font-size: 14px; color: var(--muted); margin-bottom: 14px; line-height: 1.6; }
+  .task-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+
+  .price-box { background: #fff5f0; border: 1px solid #ffd4bc; border-radius: 10px; padding: 12px 16px; text-align: center; min-width: 140px; flex-shrink: 0; }
+  .price-box .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--orange); font-weight: 500; }
+  .price-box .val { font-family: var(--font-head); font-size: 24px; font-weight: 800; color: var(--ink); }
+  .price-box .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .suggested { background: #f0fff4; border: 1px solid #b8deba; border-radius: 8px; padding: 8px 14px; font-size: 13px; color: #2e7d32; margin-top: 8px; }
+
+  .negotiation { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .cpill { display: inline-flex; align-items: center; gap: 8px; background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; }
+  .cpill.concierge { border-left: 3px solid var(--orange); }
+  .cpill.client { border-left: 3px solid #3b82f6; }
+
+  .waiting { color: var(--muted); font-size: 13px; font-style: italic; padding-top: 8px; }
+
+  @media (max-width: 700px) {
+    .dash-header { padding: 28px 20px; }
+    .dash-body { padding: 28px 20px; }
+    .task-top { flex-direction: column; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dash-header">
+  <div class="dash-header-inner">
+    <div>
+      <h1>My errands</h1>
+      <p>All errands you've posted</p>
+    </div>
+    <a href="{% url 'post_task' %}" class="btn btn-primary btn-lg">+ Post errand</a>
+  </div>
+</div>
+
+<div class="dash-body">
+  {% if tasks %}
+    <div class="task-grid">
+      {% for task in tasks %}
+      <div class="task-card {% if task.status == 'Pending' and task.runner %}highlight{% endif %}">
+        <div class="task-top">
+          <div style="flex:1;min-width:0;">
+            <div class="task-title">
+              {{ task.title }}
+              {% if task.status == 'Pending' %}
+                {% if task.runner %}<span class="badge badge-progress">Concierge proposed price</span>
+                {% else %}<span class="badge badge-pending">Awaiting concierge</span>{% endif %}
+              {% elif task.status == 'In Progress' %}<span class="badge badge-progress">In progress</span>
+              {% elif task.status == 'Completed' %}<span class="badge badge-done">Completed</span>
+              {% elif task.status == 'Paid' %}<span class="badge badge-paid">Paid</span>
+              {% elif task.status == 'Cancelled' %}<span class="badge" style="background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;">Cancelled</span>
+              {% endif %}
+            </div>
+
+            <div class="task-meta">
+              <span>📍 {{ task.location_from }} → {{ task.location_to }}</span>
+              {% if task.phone_number %}<span>📞 {{ task.phone_number }}</span>{% endif %}
+              {% if task.category %}<span>🏷 {{ task.get_category_display }}</span>{% endif %}
+              <span>🕐 {{ task.created_at|date:"M d, H:i" }}</span>
+              {% if task.deadline %}<span>⏰ Due {{ task.deadline|date:"M d, H:i" }}</span>{% endif %}
+              {% if task.client_budget %}<span>💰 Your budget: KSh {{ task.client_budget }}</span>{% endif %}
+            </div>
+
+            <p class="task-desc">{{ task.description }}</p>
+
+            {% if task.counters.all %}
+            <div class="negotiation">
+              {% for c in task.counters.all %}
+              <div class="cpill {% if c.proposed_by == task.runner %}concierge{% else %}client{% endif %}">
+                <span style="font-weight:600;font-size:11px;">{{ c.proposed_by.username }}</span>
+                <span>KSh {{ c.amount }}</span>
+                {% if c.is_accepted == True %}<span class="badge badge-done" style="font-size:10px;padding:1px 6px;">✓</span>
+                {% elif c.is_accepted == False %}<span class="badge badge-pending" style="font-size:10px;padding:1px 6px;">✗</span>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if task.suggested_price %}
+            <div class="suggested">
+              💡 Suggested fair price: <strong>KSh {{ task.suggested_price }}</strong>
+              <span style="color:var(--muted);font-size:12px;"> — midpoint of your budget &amp; concierge's offer</span>
+            </div>
+            {% endif %}
+
+            <div class="task-actions">
+              {% if task.proposed_price and task.status == 'Pending' and task.runner %}
+                <a href="{% url 'accept_task' task.id 'accept' %}" class="btn btn-success btn-sm">✓ Accept KSh {{ task.proposed_price }}</a>
+                <a href="{% url 'counter_price' task.id %}" class="btn btn-outline btn-sm">↔ Counter offer</a>
+                <a href="{% url 'accept_task' task.id 'decline' %}" class="btn btn-danger btn-sm">✗ Decline</a>
+              {% elif task.status == 'Pending' and not task.runner %}
+                <a href="{% url 'cancel_task' task.id %}" class="btn btn-ghost btn-sm" style="color:#e53e3e;">Cancel errand</a>
+              {% elif task.status == 'Completed' %}
+                <a href="{% url 'pay_runner' task.id %}" class="btn btn-primary btn-sm">💳 Pay concierge KSh {{ task.proposed_price }}</a>
+              {% elif task.status == 'Paid' and task.can_review %}
+                <a href="{% url 'leave_review' task.id %}" class="btn btn-outline btn-sm">⭐ Rate your concierge</a>
+              {% endif %}
+              <a href="{% url 'task_detail' task.id %}" class="btn btn-ghost btn-sm">Details →</a>
+            </div>
+          </div>
+
+          <div>
+            {% if task.proposed_price %}
+            <div class="price-box">
+              <div class="lbl">Concierge's offer</div>
+              <div class="val">KSh {{ task.proposed_price }}</div>
+              {% if task.client_budget %}
+              <div class="sub">Your budget: KSh {{ task.client_budget }}</div>
+              {% endif %}
+            </div>
+            {% else %}
+            <div class="waiting">Waiting for<br>a concierge…</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">📭</div>
+      <p>No errands yet. Post your first one!</p>
+      <a href="{% url 'post_task' %}" class="btn btn-primary" style="margin-top:20px;">Post an errand</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

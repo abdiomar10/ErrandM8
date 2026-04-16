@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% load static %}
+  <link rel="icon" href="{% static 'images/errandm8.ico' %}">
+  <link rel="apple-touch-icon" href="{% static 'images/errandm8_180x180.png' %}">
+  <title>{% block title %}ErrandM8{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:     #0e0e0e;
+      --paper:   #f5f2eb;
+      --cream:   #ede9df;
+      --orange:  #e85d26;
+      --orange2: #c94d1a;
+      --muted:   #7a7568;
+      --border:  #d4cfc4;
+      --white:   #ffffff;
+      --card:    #ffffff;
+      --radius:  12px;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── NAV ── */
+    nav.topnav {
+      background: var(--ink);
+      padding: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-brand .logo-box {
+      width: 32px; height: 32px;
+      background: var(--orange);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 13px;
+      color: white;
+      letter-spacing: -0.5px;
+      flex-shrink: 0;
+    }
+    .nav-brand span {
+      font-family: var(--font-head);
+      font-weight: 800;
+      font-size: 20px;
+      color: var(--white);
+      letter-spacing: -0.5px;
+    }
+    .nav-brand span em { color: var(--orange); font-style: normal; }
+
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 400;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all 0.18s;
+    }
+    .nav-links a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+    .nav-links a.btn-nav {
+      background: var(--orange);
+      color: var(--white);
+      font-weight: 500;
+    }
+    .nav-links a.btn-nav:hover { background: var(--orange2); }
+
+    .notif-bell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      color: rgba(255,255,255,0.65);
+      text-decoration: none;
+      transition: all 0.18s;
+      font-size: 18px;
+    }
+    .notif-bell:hover { background: rgba(255,255,255,0.08); color: white; }
+    .notif-badge {
+      position: absolute;
+      top: 4px; right: 4px;
+      background: var(--orange);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 99px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px;
+    }
+
+    /* ── MESSAGES ── */
+    .messages-wrap { max-width: 900px; margin: 20px auto 0; padding: 0 24px; width: 100%; }
+    .msg {
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      margin-bottom: 8px;
+      border-left: 4px solid;
+    }
+    .msg.success { background: #edf7ed; border-color: #4caf50; color: #2e7d32; }
+    .msg.error   { background: #fdecea; border-color: #e53935; color: #c62828; }
+    .msg.info    { background: #e8f4fd; border-color: #1e88e5; color: #1565c0; }
+    .msg.warning { background: #fff8e1; border-color: #ffc107; color: #e65100; }
+
+    main { flex: 1; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      color: rgba(255,255,255,0.5);
+      padding: 32px 40px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer .brand-f { font-family: var(--font-head); font-weight: 700; color: var(--white); font-size: 16px; }
+    footer .brand-f em { color: var(--orange); font-style: normal; }
+    footer a { color: rgba(255,255,255,0.5); text-decoration: none; margin-left: 20px; }
+    footer a:hover { color: var(--white); }
+
+    /* ── SHARED COMPONENTS ── */
+    .page-wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 22px; border-radius: 8px;
+      font-family: var(--font-body); font-size: 14px; font-weight: 500;
+      cursor: pointer; border: none; text-decoration: none; transition: all 0.18s;
+    }
+    .btn-primary { background: var(--orange); color: var(--white); }
+    .btn-primary:hover { background: var(--orange2); transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+    .btn-outline:hover { border-color: var(--ink); background: var(--cream); }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-ghost:hover { color: var(--ink); background: var(--cream); }
+    .btn-danger { background: #fdecea; color: #c62828; border: 1.5px solid #f7b8b5; }
+    .btn-danger:hover { background: #c62828; color: white; }
+    .btn-success { background: #edf7ed; color: #2e7d32; border: 1.5px solid #b8deba; }
+    .btn-success:hover { background: #2e7d32; color: white; }
+    .btn-sm { padding: 6px 14px; font-size: 13px; }
+    .btn-lg { padding: 14px 32px; font-size: 16px; }
+    .btn-full { width: 100%; justify-content: center; }
+
+    .label {
+      display: block; font-size: 13px; font-weight: 500; color: var(--muted);
+      margin-bottom: 6px; letter-spacing: 0.02em; text-transform: uppercase;
+    }
+    input[type=text], input[type=email], input[type=password],
+    input[type=number], input[type=datetime-local], textarea, select {
+      width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-family: var(--font-body); font-size: 15px;
+      background: var(--white); color: var(--ink); transition: border-color 0.18s; outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--orange); }
+    .field { margin-bottom: 20px; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; }
+    .badge-pending  { background: #fff8e1; color: #b45309; border: 1px solid #fde68a; }
+    .badge-progress { background: #e8f4fd; color: #1565c0; border: 1px solid #bfdbfe; }
+    .badge-done     { background: #edf7ed; color: #2e7d32; border: 1px solid #b8deba; }
+    .badge-paid     { background: #f3f0ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    @media (max-width: 600px) {
+      nav.topnav { padding: 0 16px; }
+      footer { padding: 24px 16px; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="{% url 'landing_page' %}" class="nav-brand">
+    {% load static %}
+    <div class="logo-box">M8</div>
+    <span>Errand<em>M8</em></span>
+  </a>
+  <div class="nav-links">
+    <a href="{% url 'landing_page' %}">Home</a>
+    <a href="{% url 'about' %}">About</a>
+    <a href="{% url 'contact' %}">Contact</a>
+    {% if user.is_authenticated %}
+      {% if user.profile.user_type == 'client' %}
+        <a href="{% url 'client_dashboard' %}">Dashboard</a>
+      {% else %}
+        <a href="{% url 'runner_dashboard' %}">Dashboard</a>
+      {% endif %}
+      <a href="{% url 'profile' %}" style="color:rgba(255,255,255,0.65);">{{ user.username }}</a>
+      <a href="{% url 'notifications' %}" class="notif-bell" title="Notifications">
+        🔔
+        {% if unread and unread > 0 %}
+          <span class="notif-badge">{{ unread }}</span>
+        {% endif %}
+      </a>
+      <a href="{% url 'logout' %}" class="btn-nav">Log out</a>
+    {% else %}
+      <a href="{% url 'login' %}">Log in</a>
+      <a href="{% url 'signup' %}" class="btn-nav">Sign up</a>
+    {% endif %}
+  </div>
+</nav>
+
+{% if messages %}
+<div class="messages-wrap">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span class="brand-f">Errand<em>M8</em></span>
+  <span>© 2025 ErrandM8. Built for Nairobi.</span>
+  <div>
+    <a href="{% url 'terms_and_conditions' %}">Terms</a>
+    <a href="{% url 'privacy_policy' %}">Privacy</a>
+    <a href="{% url 'contact' %}">Contact</a>
+  </div>
+</footer>
+
+</body>
+</html>

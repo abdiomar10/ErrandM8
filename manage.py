@@ -8,7 +8,7 @@ import sys
 def main():
     """Run administrative tasks."""
     load_dotenv()  # This loads the .env file and sets the environment variables
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Usend.settings')
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ErrandM8.settings')
 
     try:
         from django.core.management import execute_from_command_line

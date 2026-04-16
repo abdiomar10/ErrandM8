@@ -1,0 +1,42 @@
+{% extends "ErrandM8App/Base.html" %}
+{% block title %}Two-factor authentication — Usend{% endblock %}
+{% block extra_head %}
+<style>
+  .otp-wrap { max-inline-size: 440px; margin: 100px auto; padding: 0 24px; text-align: center; }
+  .otp-wrap h1 { font-family: var(--font-head); font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-block-end: 8px; }
+  .otp-phone { color: var(--orange); font-weight: 600; font-size: 16px; margin-block-end: 28px; }
+  .otp-wrap p.sub { color: var(--muted); font-size: 14px; margin-block-end: 32px; }
+  .otp-input-wrap input {
+    font-size: 32px;
+    letter-spacing: 0.4em;
+    text-align: center;
+    padding: 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    inline-size: 100%;
+    font-family: var(--font-head);
+    font-weight: 700;
+  }
+  .otp-input-wrap input:focus { border-color: var(--orange); outline: none; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="otp-wrap">
+  <div style="font-size:48px;margin-block-end:16px;">🔐</div>
+  <h1>Two-factor auth</h1>
+  <p class="otp-phone">Code sent to {{ phone }}</p>
+  <p class="sub">Enter the 6-digit code to complete login.</p>
+  <div class="card" style="text-align:start;">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <div class="otp-input-wrap" style="margin-block-end:20px;">
+        {{ form.otp }}
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg">Confirm</button>
+    </form>
+  </div>
+  <div style="margin-block-start:16px;font-size:14px;color:var(--muted);">
+    <a href="{% url 'login' %}" style="color:var(--orange);text-decoration:none;">← Back to login</a>
+  </div>
+</div>
+{% endblock %}

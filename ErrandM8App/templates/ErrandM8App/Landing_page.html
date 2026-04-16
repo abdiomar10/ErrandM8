@@ -1,0 +1,303 @@
+{% extends "ErrandM8App/Base.html" %}
+{% load static %}
+
+{% block title %}Usend — Errands, done fast{% endblock %}
+
+{% block extra_head %}
+<style>
+  .hero {
+    background: var(--ink);
+    min-block-size: calc(100vh - 64px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    position: relative;
+  }
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px 80px 80px;
+    position: relative;
+    z-index: 2;
+  }
+  .hero-eyebrow {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-block-end: 24px;
+  }
+  .hero-title {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: clamp(48px, 6vw, 80px);
+    line-height: 1.0;
+    color: var(--white);
+    letter-spacing: -2px;
+    margin-block-end: 28px;
+  }
+  .hero-title span { color: var(--orange); }
+  .hero-sub {
+    font-size: 17px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.7;
+    max-inline-size: 380px;
+    margin-block-end: 44px;
+  }
+  .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+
+  .hero-right {
+    background: var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-right::before {
+    content: '';
+    position: absolute;
+    inset-block-start: -100px; inset-inline-end: -100px;
+    inline-size: 400px; block-size: 400px;
+    border: 60px solid rgba(255,255,255,0.1);
+    border-radius: 50%;
+  }
+  .hero-right::after {
+    content: '';
+    position: absolute;
+    inset-block-end: -80px; inset-inline-start: -60px;
+    inline-size: 280px; block-size: 280px;
+    border: 40px solid rgba(0,0,0,0.08);
+    border-radius: 50%;
+  }
+  .hero-card {
+    background: var(--white);
+    border-radius: 20px;
+    padding: 36px;
+    inline-size: 100%;
+    max-inline-size: 340px;
+    position: relative;
+    z-index: 2;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.15);
+  }
+  .hero-card-tag {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-block-end: 12px;
+  }
+  .hero-card h3 {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+    margin-block-end: 6px;
+  }
+  .hero-card p { font-size: 13px; color: var(--muted); margin-block-end: 20px; }
+  .hero-card-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-block-end: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .hero-card-row:last-child { border-block-end: none; }
+  .dot { inline-size: 8px; block-size: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-orange { background: var(--orange); }
+  .dot-green  { background: #22c55e; }
+  .dot-blue   { background: #3b82f6; }
+  .hero-card-row span { color: var(--muted); font-size: 13px; margin-inline-start: auto; }
+
+  /* Stats strip */
+  .stats {
+    background: var(--cream);
+    border-block-end: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+  .stat {
+    padding: 32px 60px;
+    text-align: center;
+    border-inline-end: 1px solid var(--border);
+  }
+  .stat:last-child { border-inline-end: none; }
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--orange);
+    line-height: 1;
+    margin-block-end: 6px;
+  }
+  .stat-label { font-size: 13px; color: var(--muted); }
+
+  /* How it works */
+  .how {
+    padding: 100px 80px;
+    max-inline-size: 1100px;
+    margin: 0 auto;
+  }
+  .how-head {
+    text-align: center;
+    margin-block-end: 64px;
+  }
+  .how-head h2 {
+    font-family: var(--font-head);
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-block-end: 12px;
+  }
+  .how-head p { color: var(--muted); font-size: 16px; }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .step {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 36px 28px;
+    position: relative;
+  }
+  .step-num {
+    font-family: var(--font-head);
+    font-size: 56px;
+    font-weight: 800;
+    color: var(--cream);
+    line-height: 1;
+    margin-block-end: 16px;
+  }
+  .step h3 {
+    font-family: var(--font-head);
+    font-size: 20px;
+    font-weight: 700;
+    margin-block-end: 10px;
+  }
+  .step p { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  /* CTA bottom */
+  .cta-bottom {
+    background: var(--orange);
+    padding: 80px;
+    text-align: center;
+  }
+  .cta-bottom h2 {
+    font-family: var(--font-head);
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--white);
+    letter-spacing: -1px;
+    margin-block-end: 12px;
+  }
+  .cta-bottom p { color: rgba(255,255,255,0.75); font-size: 16px; margin-block-end: 36px; }
+
+  @media (max-inline-size: 768px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-right { display: none; }
+    .hero-left { padding: 60px 24px; }
+    .stats { flex-direction: column; }
+    .stat { border-inline-end: none; border-block-end: 1px solid var(--border); padding: 24px; }
+    .how { padding: 60px 24px; }
+    .steps { grid-template-columns: 1fr; }
+    .cta-bottom { padding: 60px 24px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-left">
+    <p class="hero-eyebrow">Nairobi's errand network</p>
+    <h1 class="hero-title">Get it done.<br><span>Right now.</span></h1>
+    <p class="hero-sub">Post any errand — grocery run, document drop, pickup — and a concierge within 3km picks it up. Fast, reliable, local.</p>
+    <div class="hero-ctas">
+      <a href="{% url 'signup' %}" class="btn btn-primary btn-lg">Post an errand</a>
+      <a href="{% url 'signup' %}" class="btn btn-lg" style="background:rgba(255,255,255,0.08);color:white;">Become a concierge</a>
+    </div>
+  </div>
+  <div class="hero-right">
+    <div class="hero-card">
+      <p class="hero-card-tag">Live nearby</p>
+      <h3>Available errands</h3>
+      <p>concierge see jobs within 3km of their location</p>
+      <div class="hero-card-row">
+        <div class="dot dot-orange"></div>
+        Grocery run — Westlands
+        <span>0.8km</span>
+      </div>
+      <div class="hero-card-row">
+        <div class="dot dot-green"></div>
+        Document delivery — CBD
+        <span>1.4km</span>
+      </div>
+      <div class="hero-card-row">
+        <div class="dot dot-blue"></div>
+        Pickup — Ngong Road
+        <span>2.1km</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">3km</div>
+    <div class="stat-label">Max concierge radius</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">&lt;15min</div>
+    <div class="stat-label">Average response time</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">5 types</div>
+    <div class="stat-label">Errand categories</div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section class="how">
+  <div class="how-head">
+    <h2>How ErrandM8 works</h2>
+    <p>Three steps, start to finish.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h3>Post your errand</h3>
+      <p>Describe what you need done, where from, where to. Your location is captured automatically to match nearby concierge.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h3>A concierge picks it up</h3>
+      <p>Concierge within 3km see your errand on their dashboard and propose a price. You accept or decline.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h3>Done. Pay and rate.</h3>
+      <p>Once complete, you pay the concierge and leave a review. Simple, transparent, accountable.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Bottom CTA -->
+<section class="cta-bottom">
+  <h2>Ready to get started?</h2>
+  <p>Join clients and concierge already using ErrandM8 across Nairobi.</p>
+  <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+    <a href="{% url 'signup' %}" class="btn btn-lg" style="background:white;color:var(--orange);font-weight:600;">Create an account</a>
+    <a href="{% url 'login' %}" class="btn btn-lg" style="background:rgba(0,0,0,0.15);color:white;">Log in</a>
+  </div>
+</section>
+
+{% endblock %}
