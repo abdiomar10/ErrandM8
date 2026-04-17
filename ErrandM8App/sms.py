@@ -65,9 +65,9 @@ def send_task_notification(task, event='new_errand', recipient_phone=None):
     title = getattr(task, 'title', 'your errand')
 
     msgs = {
-        'runner_accepted':  f'Usend: A runner accepted "{title}".',
+        'concierge_accepted':  f'Usend: A concierge accepted "{title}".',
         'task_started':     f'Usend: "{title}" is now in progress!',
-        'task_completed':   f'Usend: "{title}" is complete. Please pay the runner.',
+        'task_completed':   f'Usend: "{title}" is complete. Please pay the concierge.',
         'payment_received': f'Usend: Payment received for "{title}". Well done!',
         'new_errand':       f'Usend: New errand nearby - "{title}". Open the app to accept.',
         'price_proposed':   f'Usend: New price proposed for "{title}". Check your app.',
@@ -83,11 +83,11 @@ def send_task_notification(task, event='new_errand', recipient_phone=None):
 
     if not phone:
         try:
-            # client or runner fallback
+            # client or concierge fallback
             if hasattr(task, 'client') and task.client:
                 phone = task.client.profile.phone_number
-            elif hasattr(task, 'runner') and task.runner:
-                phone = task.runner.profile.phone_number
+            elif hasattr(task, 'concierge') and task.concierge:
+                phone = task.concierge.profile.phone_number
         except Exception:
             phone = None
 

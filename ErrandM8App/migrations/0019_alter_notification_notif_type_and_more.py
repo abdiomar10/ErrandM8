@@ -18,6 +18,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='profile',
             name='user_type',
-            field=models.CharField(choices=[('client', 'Client'), ('runner', 'Concierge')], default='client', max_length=10),
+            field=models.CharField(choices=[('client', 'Client'), ('concierge', 'Concierge')], default='client', max_length=10),
         ),
     ]

@@ -20,7 +20,7 @@ def _otp():
 class Profile(models.Model):
     USER_TYPE_CHOICES = [
         ('client', 'Client'),
-        ('runner', 'Concierge'),   # DB value stays 'runner' for migration compatibility
+        ('concierge', 'Concierge'),   # DB value stays 'runner' for migration compatibility
     ]
 
     user              = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -46,7 +46,7 @@ class Profile(models.Model):
     jobs_completed  = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        label = 'Concierge' if self.user_type == 'runner' else 'Client'
+        label = 'Concierge' if self.user_type == 'concierge' else 'Client'
         return f'{self.user.username} ({label})'
 
     def generate_otp(self):
@@ -75,7 +75,7 @@ class Profile(models.Model):
 
     @property
     def display_role(self):
-        return 'Concierge' if self.user_type == 'runner' else 'Client'
+        return 'Concierge' if self.user_type == 'concierge' else 'Client'
 
 
 class Task(models.Model):
@@ -126,25 +126,25 @@ class Task(models.Model):
     def __str__(self):
         return self.title
 
-    def distance_to_runner(self, runner_profile):
+    def distance_to_concierge(self, concierge_profile):
         if None in (self.pickup_latitude, self.pickup_longitude,
-                    runner_profile.latitude, runner_profile.longitude):
+                    concierge_profile.latitude, concierge_profile.longitude):
             return None
         return haversine_distance(
             self.pickup_latitude, self.pickup_longitude,
-            runner_profile.latitude, runner_profile.longitude,
+            concierge_profile.latitude, concierge_profile.longitude,
         )
 
     @classmethod
-    def nearby_pending(cls, runner_profile, radius_km=3):
+    def nearby_pending(cls, concierge_profile, radius_km=3):
         pending = cls.objects.filter(status='Pending').select_related('client')
-        if runner_profile.latitude is None:
+        if concierge_profile.latitude is None:
             for t in pending:
                 t._distance = None
             return list(pending)
         nearby = []
         for task in pending:
-            dist = task.distance_to_runner(runner_profile)
+            dist = task.distance_to_concierge(concierge_profile)
             if dist is None or dist <= radius_km:
                 task._distance = round(dist, 2) if dist is not None else None
                 nearby.append(task)

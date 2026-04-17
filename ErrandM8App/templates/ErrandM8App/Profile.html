@@ -61,7 +61,7 @@
           <div class="val">{{ tasks_completed }}</div>
           <div class="lbl">Jobs done</div>
         </div>
-        {% if profile.user_type == 'runner' %}
+        {% if profile.user_type == 'concierge' %}
         <div class="profile-stat">
           <div class="val">KSh {{ profile.total_earned|floatformat:0 }}</div>
           <div class="lbl">Total earned</div>

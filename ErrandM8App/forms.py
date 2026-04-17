@@ -7,7 +7,7 @@ from .models import Task, Profile, Review, PriceCounter
 class CustomUserCreationForm(UserCreationForm):
     USER_TYPE_CHOICES = [
         ('client', 'Client — I need things done'),
-        ('runner', 'Concierge — I pick up nearby errands'),
+        ('concierge', 'Concierge — I pick up nearby errands'),
     ]
     email = forms.EmailField(required=True, label='Email address')
     phone_number = forms.CharField(

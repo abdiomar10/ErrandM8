@@ -222,7 +222,7 @@
       {% if user.profile.user_type == 'client' %}
         <a href="{% url 'client_dashboard' %}">Dashboard</a>
       {% else %}
-        <a href="{% url 'runner_dashboard' %}">Dashboard</a>
+        <a href="{% url 'concierge_dashboard' %}">Dashboard</a>
       {% endif %}
       <a href="{% url 'profile' %}" style="color:rgba(255,255,255,0.65);">{{ user.username }}</a>
       <a href="{% url 'notifications' %}" class="notif-bell" title="Notifications">

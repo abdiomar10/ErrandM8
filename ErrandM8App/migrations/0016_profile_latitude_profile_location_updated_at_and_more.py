@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ErrandM8App', '0015_task_runner'),
+        ('ErrandM8App', '0015_task_concierge'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

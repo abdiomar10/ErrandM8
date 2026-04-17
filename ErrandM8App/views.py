@@ -49,8 +49,8 @@ def _ctx(request, extra=None):
 
 def _dashboard_redirect(user):
     try:
-        if user.profile.user_type == 'runner':
-            return redirect('runner_dashboard')
+        if user.profile.user_type == 'concierge':
+            return redirect('concierge_dashboard')
     except Profile.DoesNotExist:
         pass
     return redirect('client_dashboard')
@@ -370,7 +370,7 @@ def profile_view(request, username=None):
     is_own = target_user == request.user
 
     reviews = target_user.reviews_received.all().order_by('-created_at')
-    tasks_completed = Task.objects.filter(runner=target_user, status='Paid').count()
+    tasks_completed = Task.objects.filter(concierge=target_user, status='Paid').count()
 
     form = None
     if is_own and request.method == 'POST':
@@ -404,7 +404,7 @@ def client_dashboard(request):
     for task in tasks:
         task.can_review = (
             task.status == 'Paid'
-            and task.runner
+            and task.concierger
             and not Review.objects.filter(task=task, reviewer=request.user).exists()
         )
         task.latest_counter = task.counters.order_by('-created_at').first()
@@ -413,20 +413,20 @@ def client_dashboard(request):
 
 
 @login_required
-def runner_dashboard(request):
+def concierge_dashboard(request):
     profile, _ = Profile.objects.get_or_create(user=request.user)
 
     tasks_pending = Task.nearby_pending(profile, radius_km=3)
-    tasks_accepted = Task.objects.filter(runner=request.user, status='In Progress')
-    tasks_completed = Task.objects.filter(runner=request.user, status__in=['Completed', 'Paid'])
+    tasks_accepted = Task.objects.filter(concierge=request.user, status='In Progress')
+    tasks_completed = Task.objects.filter(concierge=request.user, status__in=['Completed', 'Paid'])
 
-    return render(request, 'ErrandM8App/Runner_dashboard.html', _ctx(request, {
+    return render(request, 'ErrandM8App/concierge_dashboard.html', _ctx(request, {
         'tasks_pending': tasks_pending,
         'tasks_accepted': tasks_accepted,
         'tasks_completed': tasks_completed,
         'has_location': profile.latitude is not None,
-        'runner_lat': profile.latitude,
-        'runner_lng': profile.longitude,
+        'concierge_lat': profile.latitude,
+        'concierge_lng': profile.longitude,
     }))
 
 
@@ -453,7 +453,7 @@ def post_task(request):
 def task_detail(request, task_id):
     task = get_object_or_404(Task, id=task_id)
 
-    if request.user not in (task.client, task.runner):
+    if request.user not in (task.client, task.concierge):
         return redirect('landing_page')
 
     messages = task.messages.all()
@@ -479,7 +479,7 @@ def set_price(request, task_id):
             counter.proposed_by = request.user
             counter.save()
 
-            return redirect('runner_dashboard')
+            return redirect('concierge_dashboard')
     return render(request, 'ErrandM8App/Set_price.html', {'form': PriceCounterForm()})
 
 
@@ -510,11 +510,11 @@ def complete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     task.status = 'Completed'
     task.save()
-    return redirect('runner_dashboard')
+    return redirect('concierge_dashboard')
 
 
 @login_required
-def pay_runner(request, task_id):
+def pay_concierge(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     task.status = 'Paid'
     task.save()

@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='notification',
             name='notif_type',
-            field=models.CharField(choices=[('price_proposed', 'Runner proposed a price'), ('price_countered', 'Counter-offer received'), ('task_accepted', 'Task accepted'), ('task_declined', 'Task declined'), ('task_completed', 'Task completed'), ('payment_received', 'Payment received'), ('review_received', 'Review received'), ('chat_message', 'New message'), ('otp', 'OTP sent')], max_length=30),
+            field=models.CharField(choices=[('price_proposed', 'Concierge proposed a price'), ('price_countered', 'Counter-offer received'), ('task_accepted', 'Task accepted'), ('task_declined', 'Task declined'), ('task_completed', 'Task completed'), ('payment_received', 'Payment received'), ('review_received', 'Review received'), ('chat_message', 'New message'), ('otp', 'OTP sent')], max_length=30),
         ),
         migrations.AlterField(
             model_name='task',

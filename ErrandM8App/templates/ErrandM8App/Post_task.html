@@ -52,7 +52,7 @@
 <div class="form-page" id="post-task-form">
   <div>
     <h1>Post an errand</h1>
-    <p class="sub">Fill in the details and a nearby runner will pick it up.</p>
+    <p class="sub">Fill in the details and a nearby concierge will pick it up.</p>
     <div class="form-card">
       <form method="post" novalidate>
         {% csrf_token %}
@@ -85,7 +85,7 @@
           <label class="label">Contact number</label>
           <input type="text" name="phone_number" value="{{ form.phone_number.value|default:'' }}" placeholder="+254…">
         </div>
-        <p class="loc-hint" id="location-hint">📍 Capturing your location to find nearby runners…</p>
+        <p class="loc-hint" id="location-hint">📍 Capturing your location to find nearby concierges…</p>
         <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:24px;">Post errand</button>
       </form>
     </div>
@@ -93,7 +93,7 @@
   <div class="tip-card">
     <h3>Tips for faster pickup</h3>
     <div class="tip-item"><span class="tip-icon">📍</span>Be specific about the pickup address — include a landmark.</div>
-    <div class="tip-item"><span class="tip-icon">📞</span>Add your phone number so the runner can call if needed.</div>
+    <div class="tip-item"><span class="tip-icon">📞</span>Add your phone number so the concierge can call if needed.</div>
     <div class="tip-item"><span class="tip-icon">⏱</span>Post during peak hours (8am–8pm) for the fastest response.</div>
     <div class="tip-item"><span class="tip-icon">💬</span>A clear description = fewer back-and-forth messages.</div>
   </div>
@@ -105,10 +105,10 @@ if(navigator.geolocation){
   navigator.geolocation.getCurrentPosition(pos=>{
     document.getElementById('pickup_latitude').value=pos.coords.latitude;
     document.getElementById('pickup_longitude').value=pos.coords.longitude;
-    document.getElementById('location-hint').textContent='✓ Location captured — runners within 3km will see this.';
+    document.getElementById('location-hint').textContent='✓ Location captured — concierges within 3km will see this.';
     document.getElementById('location-hint').style.color='#16a34a';
   },()=>{
-    document.getElementById('location-hint').textContent='⚠ Could not get location. Runners may not see this nearby.';
+    document.getElementById('location-hint').textContent='⚠ Could not get location. Concierges may not see this nearby.';
   });
 }
 </script>

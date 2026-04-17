@@ -60,13 +60,13 @@
   {% if tasks %}
     <div class="task-grid">
       {% for task in tasks %}
-      <div class="task-card {% if task.status == 'Pending' and task.runner %}highlight{% endif %}">
+      <div class="task-card {% if task.status == 'Pending' and task.concierge %}highlight{% endif %}">
         <div class="task-top">
           <div style="flex:1;min-width:0;">
             <div class="task-title">
               {{ task.title }}
               {% if task.status == 'Pending' %}
-                {% if task.runner %}<span class="badge badge-progress">Concierge proposed price</span>
+                {% if task.concierge %}<span class="badge badge-progress">Concierge proposed price</span>
                 {% else %}<span class="badge badge-pending">Awaiting concierge</span>{% endif %}
               {% elif task.status == 'In Progress' %}<span class="badge badge-progress">In progress</span>
               {% elif task.status == 'Completed' %}<span class="badge badge-done">Completed</span>
@@ -89,7 +89,7 @@
             {% if task.counters.all %}
             <div class="negotiation">
               {% for c in task.counters.all %}
-              <div class="cpill {% if c.proposed_by == task.runner %}concierge{% else %}client{% endif %}">
+              <div class="cpill {% if c.proposed_by == task.concierge %}concierge{% else %}client{% endif %}">
                 <span style="font-weight:600;font-size:11px;">{{ c.proposed_by.username }}</span>
                 <span>KSh {{ c.amount }}</span>
                 {% if c.is_accepted == True %}<span class="badge badge-done" style="font-size:10px;padding:1px 6px;">✓</span>
@@ -108,14 +108,14 @@
             {% endif %}
 
             <div class="task-actions">
-              {% if task.proposed_price and task.status == 'Pending' and task.runner %}
+              {% if task.proposed_price and task.status == 'Pending' and task.concierge %}
                 <a href="{% url 'accept_task' task.id 'accept' %}" class="btn btn-success btn-sm">✓ Accept KSh {{ task.proposed_price }}</a>
                 <a href="{% url 'counter_price' task.id %}" class="btn btn-outline btn-sm">↔ Counter offer</a>
                 <a href="{% url 'accept_task' task.id 'decline' %}" class="btn btn-danger btn-sm">✗ Decline</a>
-              {% elif task.status == 'Pending' and not task.runner %}
+              {% elif task.status == 'Pending' and not task.concierge %}
                 <a href="{% url 'cancel_task' task.id %}" class="btn btn-ghost btn-sm" style="color:#e53e3e;">Cancel errand</a>
               {% elif task.status == 'Completed' %}
-                <a href="{% url 'pay_runner' task.id %}" class="btn btn-primary btn-sm">💳 Pay concierge KSh {{ task.proposed_price }}</a>
+                <a href="{% url 'pay_concierge' task.id %}" class="btn btn-primary btn-sm">💳 Pay concierge KSh {{ task.proposed_price }}</a>
               {% elif task.status == 'Paid' and task.can_review %}
                 <a href="{% url 'leave_review' task.id %}" class="btn btn-outline btn-sm">⭐ Rate your concierge</a>
               {% endif %}

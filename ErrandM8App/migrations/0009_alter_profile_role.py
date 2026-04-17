@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='profile',
             name='role',
-            field=models.CharField(blank=True, choices=[('client', 'Client'), ('runner', 'Runner')], max_length=10, null=True),
+            field=models.CharField(blank=True, choices=[('client', 'Client'), ('concierge', 'Concierge')], max_length=10, null=True),
         ),
     ]

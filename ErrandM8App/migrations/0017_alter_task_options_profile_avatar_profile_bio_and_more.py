@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='profile',
             name='user_type',
-            field=models.CharField(choices=[('client', 'Client'), ('runner', 'Runner')], default='client', max_length=10),
+            field=models.CharField(choices=[('client', 'Client'), ('concierge', 'Concierge')], default='client', max_length=10),
         ),
         migrations.AlterField(
             model_name='task',
@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
             name='Notification',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('notif_type', models.CharField(choices=[('price_proposed', 'Runner proposed a price'), ('price_countered', 'Counter-offer received'), ('task_accepted', 'Task accepted'), ('task_declined', 'Task declined'), ('task_completed', 'Task completed'), ('payment_received', 'Payment received'), ('review_received', 'Review received')], max_length=30)),
+                ('notif_type', models.CharField(choices=[('price_proposed', 'Concierge proposed a price'), ('price_countered', 'Counter-offer received'), ('task_accepted', 'Task accepted'), ('task_declined', 'Task declined'), ('task_completed', 'Task completed'), ('payment_received', 'Payment received'), ('review_received', 'Review received')], max_length=30)),
                 ('message', models.CharField(max_length=255)),
                 ('is_read', models.BooleanField(default=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),

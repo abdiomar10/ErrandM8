@@ -40,7 +40,7 @@ urlpatterns = [
 
     # ── Dashboards ────────────────────────────────────────────────────────────
     path('dashboard/client/', views.client_dashboard, name='client_dashboard'),
-    path('dashboard/runner/', views.runner_dashboard, name='runner_dashboard'),
+    path('dashboard/concierge/', views.concierge_dashboard, name='concierge_dashboard'),
 
     # ── Errand lifecycle ──────────────────────────────────────────────────────
     path('errands/post/', views.post_task, name='post_task'),
@@ -49,7 +49,7 @@ urlpatterns = [
     path('errands/<int:task_id>/counter/', views.counter_price, name='counter_price'),
     path('errands/<int:task_id>/accept/<str:action>/', views.accept_task, name='accept_task'),
     path('errands/<int:task_id>/complete/', views.complete_task, name='complete_task'),
-    path('errands/<int:task_id>/pay/', views.pay_runner, name='pay_runner'),
+    path('errands/<int:task_id>/pay/', views.pay_concierge, name='pay_concierge'),
     path('errands/<int:task_id>/cancel/', views.cancel_task, name='cancel_task'),
     path('errands/<int:task_id>/review/', views.leave_review, name='leave_review'),
 

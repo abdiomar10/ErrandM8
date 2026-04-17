@@ -12,9 +12,9 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'client', 'runner', 'category', 'status', 'proposed_price', 'created_at')
+    list_display = ('title', 'client', 'concierge', 'category', 'status', 'proposed_price', 'created_at')
     list_filter = ('status', 'category')
-    search_fields = ('title', 'client__username', 'runner__username', 'location_from', 'location_to')
+    search_fields = ('title', 'client__username', 'concierge__username', 'location_from', 'location_to')
     readonly_fields = ('created_at', 'updated_at', 'pickup_latitude', 'pickup_longitude')
     date_hierarchy = 'created_at'
 

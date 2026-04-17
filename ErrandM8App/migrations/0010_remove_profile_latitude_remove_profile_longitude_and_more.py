@@ -25,6 +25,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='profile',
             name='user_type',
-            field=models.CharField(choices=[('client', 'Client'), ('runner', 'Errands Runner')], default='client', max_length=10),
+            field=models.CharField(choices=[('client', 'Client'), ('concierge', 'Concierge')], default='client', max_length=10),
         ),
     ]

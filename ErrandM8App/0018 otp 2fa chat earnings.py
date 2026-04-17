@@ -89,7 +89,7 @@ class Migration(migrations.Migration):
             name='notif_type',
             field=models.CharField(
                 choices=[
-                    ('price_proposed',  'Runner proposed a price'),
+                    ('price_proposed',  'Concierge proposed a price'),
                     ('price_countered', 'Counter-offer received'),
                     ('task_accepted',   'Task accepted'),
                     ('task_declined',   'Task declined'),

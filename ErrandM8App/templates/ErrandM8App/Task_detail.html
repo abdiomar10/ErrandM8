@@ -15,7 +15,7 @@
     background: var(--white); border: 1px solid var(--border);
     border-radius: 10px; padding: 14px 18px; margin-bottom: 10px;
   }
-  .counter-item.from-runner { border-left: 3px solid var(--orange); }
+  .counter-item.from-concierge { border-left: 3px solid var(--orange); }
   .counter-item.from-client { border-left: 3px solid #3b82f6; }
   .counter-who { font-weight: 600; font-size: 13px; }
   .counter-amount { font-family: var(--font-head); font-size: 20px; font-weight: 800; color: var(--orange); }
@@ -51,11 +51,11 @@
   <div class="section">
     <div class="section-head">Price negotiation</div>
     {% for c in counters %}
-    <div class="counter-item {% if c.proposed_by == task.runner %}from-runner{% else %}from-client{% endif %}">
+    <div class="counter-item {% if c.proposed_by == task.concierge %}from-concierge{% else %}from-client{% endif %}">
       <div>
         <div class="counter-who">{{ c.proposed_by.username }}
           <span style="font-weight:400;color:var(--muted);">
-            {% if c.proposed_by == task.runner %}(runner){% else %}(client){% endif %}
+            {% if c.proposed_by == task.concierge %}(concierge){% else %}(client){% endif %}
           </span>
         </div>
         <div class="counter-amount">KSh {{ c.amount }}</div>
