@@ -404,7 +404,7 @@ def client_dashboard(request):
     for task in tasks:
         task.can_review = (
             task.status == 'Paid'
-            and task.concierger
+            and task.concierge is not None
             and not Review.objects.filter(task=task, reviewer=request.user).exists()
         )
         task.latest_counter = task.counters.order_by('-created_at').first()

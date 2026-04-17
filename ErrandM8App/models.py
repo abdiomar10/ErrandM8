@@ -20,7 +20,7 @@ def _otp():
 class Profile(models.Model):
     USER_TYPE_CHOICES = [
         ('client', 'Client'),
-        ('concierge', 'Concierge'),   # DB value stays 'runner' for migration compatibility
+        ('concierge', 'Concierge'),   # DB value stays 'concierge' for migration compatibility
     ]
 
     user              = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -100,7 +100,7 @@ class Task(models.Model):
     ]
 
     client   = models.ForeignKey(User, related_name='tasks', on_delete=models.CASCADE)
-    runner   = models.ForeignKey(User, related_name='assigned_tasks', null=True, blank=True, on_delete=models.SET_NULL)
+    concierge = models.ForeignKey(User, related_name='assigned_tasks', null=True, blank=True, on_delete=models.SET_NULL)
 
     title        = models.CharField(max_length=255)
     description  = models.TextField()
