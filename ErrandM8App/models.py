@@ -19,15 +19,15 @@ def _otp():
 
 class Profile(models.Model):
     USER_TYPE_CHOICES = [
-        ('client', 'Client'),
-        ('concierge', 'Concierge'),   # DB value stays 'concierge' for migration compatibility
+        ('client',    'Client'),
+        ('concierge', 'Concierge'),
     ]
 
-    user              = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    user_type         = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='client')
-    phone_number      = models.CharField(max_length=15, null=True, blank=True)
-    bio               = models.TextField(blank=True)
-    avatar            = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    user                = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user_type           = models.CharField(max_length=10, choices=USER_TYPE_CHOICES, default='client')
+    phone_number        = models.CharField(max_length=15, null=True, blank=True)
+    bio                 = models.TextField(blank=True)
+    avatar              = models.ImageField(upload_to='avatars/', null=True, blank=True)
 
     phone_verified      = models.BooleanField(default=False)
     otp_code            = models.CharField(max_length=6, blank=True)
@@ -38,16 +38,15 @@ class Profile(models.Model):
     longitude           = models.FloatField(null=True, blank=True)
     location_updated_at = models.DateTimeField(null=True, blank=True)
 
-    rating       = models.FloatField(default=0.0)
-    rating_count = models.PositiveIntegerField(default=0)
+    rating              = models.FloatField(default=0.0)
+    rating_count        = models.PositiveIntegerField(default=0)
 
-    is_online       = models.BooleanField(default=False)
-    total_earned    = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    jobs_completed  = models.PositiveIntegerField(default=0)
+    is_online           = models.BooleanField(default=False)
+    total_earned        = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    jobs_completed      = models.PositiveIntegerField(default=0)
 
     def __str__(self):
-        label = 'Concierge' if self.user_type == 'concierge' else 'Client'
-        return f'{self.user.username} ({label})'
+        return f'{self.user.username} ({self.display_role})'
 
     def generate_otp(self):
         self.otp_code = _otp()
@@ -99,26 +98,26 @@ class Task(models.Model):
         ('other',       'Other'),
     ]
 
-    client   = models.ForeignKey(User, related_name='tasks', on_delete=models.CASCADE)
-    concierge = models.ForeignKey(User, related_name='assigned_tasks', null=True, blank=True, on_delete=models.SET_NULL)
+    client            = models.ForeignKey(User, related_name='tasks', on_delete=models.CASCADE)
+    concierge         = models.ForeignKey(User, related_name='assigned_tasks', null=True, blank=True, on_delete=models.SET_NULL)
 
-    title        = models.CharField(max_length=255)
-    description  = models.TextField()
-    category     = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
-    phone_number = models.CharField(max_length=15, null=True, blank=True)
+    title             = models.CharField(max_length=255)
+    description       = models.TextField()
+    category          = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    phone_number      = models.CharField(max_length=15, null=True, blank=True)
 
-    location_from    = models.CharField(max_length=255)
-    location_to      = models.CharField(max_length=255)
-    pickup_latitude  = models.FloatField(null=True, blank=True)
-    pickup_longitude = models.FloatField(null=True, blank=True)
+    location_from     = models.CharField(max_length=255)
+    location_to       = models.CharField(max_length=255)
+    pickup_latitude   = models.FloatField(null=True, blank=True)
+    pickup_longitude  = models.FloatField(null=True, blank=True)
 
-    client_budget  = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    proposed_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    deadline       = models.DateTimeField(null=True, blank=True)
+    client_budget     = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    proposed_price    = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    deadline          = models.DateTimeField(null=True, blank=True)
 
-    status     = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    status            = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
+    created_at        = models.DateTimeField(auto_now_add=True)
+    updated_at        = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
@@ -155,6 +154,11 @@ class Task(models.Model):
     def is_reviewed(self):
         return hasattr(self, 'review')
 
+    @property
+    def distance(self):
+        """Expose _distance (set by nearby_pending) to Django templates."""
+        return getattr(self, '_distance', None)
+
 
 class PriceCounter(models.Model):
     task        = models.ForeignKey(Task, related_name='counters', on_delete=models.CASCADE)
@@ -172,11 +176,11 @@ class PriceCounter(models.Model):
 
 
 class ChatMessage(models.Model):
-    task      = models.ForeignKey(Task, related_name='messages', on_delete=models.CASCADE)
-    sender    = models.ForeignKey(User, on_delete=models.CASCADE)
-    body      = models.TextField()
+    task       = models.ForeignKey(Task, related_name='messages', on_delete=models.CASCADE)
+    sender     = models.ForeignKey(User, on_delete=models.CASCADE)
+    body       = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    is_read   = models.BooleanField(default=False)
+    is_read    = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['created_at']

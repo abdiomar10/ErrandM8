@@ -67,7 +67,6 @@
     </div>
   </div>
 </div>
-
 <div class="dash-body">
   <div class="tab-bar">
     <button class="tab active" onclick="switchTab('available', this)">
@@ -91,8 +90,8 @@
         <div class="task-card">
           <div class="task-top">
             <div class="task-title">{{ task.title }}</div>
-            {% if task._distance is not None %}
-              <span class="dist-badge">📍 {{ task._distance }} km away</span>
+            {% if task.distance is not None %}
+              <span class="dist-badge">📍 {{ task.distance }} km away</span>
             {% endif %}
           </div>
           <div class="task-meta">
