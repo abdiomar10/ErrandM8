@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  {% load static %}
+  <link rel="icon" href="{% static 'images/errandm8.ico' %}">
+  <link rel="apple-touch-icon" href="{% static 'images/errandm8_180x180.png' %}">
+  <title>{% block title %}ErrandM8{% endblock %}</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:     #0a0a0a;
+      --paper:   #f7f5f2;
+      --cream:   #eeece5;
+      --orange:  #ff5a1f;
+      --orange2: #e34c15;
+      --green:   #17c964;
+      --green-dim: #d5f5e3;
+      --muted:   #6b7280;
+      --border:  #e5e1d8;
+      --white:   #ffffff;
+      --card:    #ffffff;
+      --radius:  14px;
+      --radius-sm: 8px;
+      --radius-lg: 22px;
+      --font-head: Inter, "Segoe UI", Arial, sans-serif;
+      --font-body: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    html { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ── */
+    nav.topnav {
+      background: var(--ink);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .nav-brand .logo-box {
+      width: 30px; height: 30px;
+      background: var(--orange);
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 12px;
+      color: white;
+      letter-spacing: -0.3px;
+      flex-shrink: 0;
+    }
+    .nav-brand span {
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: 19px;
+      color: var(--white);
+      letter-spacing: -0.3px;
+    }
+    .nav-brand span em { color: var(--orange); font-style: normal; }
+
+    .nav-links { display: flex; align-items: center; gap: 4px; }
+    .nav-links a {
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 999px;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover { color: var(--white); background: rgba(255,255,255,0.08); }
+    .nav-links .btn-nav {
+      background: var(--orange);
+      color: var(--white);
+      font-weight: 600;
+    }
+    .nav-links .btn-nav:hover { background: var(--orange2); }
+    .nav-links form { margin: 0; }
+
+    .notif-bell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 999px;
+      color: rgba(255,255,255,0.6);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .notif-bell:hover { background: rgba(255,255,255,0.08); color: white; }
+    .notif-bell svg { width: 19px; height: 19px; }
+    .notif-badge {
+      position: absolute;
+      top: 3px; right: 3px;
+      background: var(--orange);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      min-width: 16px; height: 16px;
+      border-radius: 999px;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 4px;
+      border: 2px solid var(--ink);
+    }
+
+    /* ── MESSAGES ── */
+    .messages-wrap { max-width: 900px; margin: 20px auto 0; padding: 0 24px; width: 100%; }
+    .msg {
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      margin-bottom: 8px;
+      border-left: 3px solid;
+    }
+    .msg.success { background: #edf9f0; border-color: var(--green); color: #0e7a3d; }
+    .msg.error   { background: #fdecea; border-color: #e53935; color: #c62828; }
+    .msg.info    { background: #e8f4fd; border-color: #1e88e5; color: #1565c0; }
+    .msg.warning { background: #fff8e1; border-color: #ffc107; color: #92400e; }
+
+    main { flex: 1; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--ink);
+      color: rgba(255,255,255,0.45);
+      padding: 32px 32px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    footer .brand-f { font-family: var(--font-head); font-weight: 700; color: var(--white); font-size: 16px; }
+    footer .brand-f em { color: var(--orange); font-style: normal; }
+    footer a { color: rgba(255,255,255,0.45); text-decoration: none; margin-left: 20px; }
+    footer a:hover { color: var(--white); }
+
+    /* ── SHARED COMPONENTS ── */
+    .page-wrap { max-width: 960px; margin: 0 auto; padding: 48px 24px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 32px; }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 11px 22px; border-radius: var(--radius-sm);
+      font-family: var(--font-body); font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; text-decoration: none; transition: all 0.15s;
+    }
+    .btn-primary { background: var(--ink); color: var(--white); }
+    .btn-primary:hover { background: #000; transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--border); }
+    .btn-outline:hover { border-color: var(--ink); background: var(--cream); }
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-ghost:hover { color: var(--ink); background: var(--cream); }
+    .btn-danger { background: #fdecea; color: #c62828; border: 1.5px solid #f7b8b5; }
+    .btn-danger:hover { background: #c62828; color: white; }
+    .btn-success { background: var(--green-dim); color: #0e7a3d; border: 1.5px solid #a7e9c1; }
+    .btn-success:hover { background: var(--green); color: white; }
+    .btn-sm { padding: 7px 14px; font-size: 13px; border-radius: var(--radius-sm); }
+    .btn-lg { padding: 15px 30px; font-size: 15px; border-radius: 999px; }
+    .btn-full { width: 100%; justify-content: center; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+
+    /* Signal-orange primary CTA (used for the app's main action buttons) */
+    .btn-lg.btn-primary { background: var(--orange); }
+    .btn-lg.btn-primary:hover { background: var(--orange2); }
+
+    .label {
+      display: block; font-size: 13px; font-weight: 500; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type=text], input[type=email], input[type=password],
+    input[type=number], input[type=datetime-local], textarea, select {
+      width: 100%; padding: 11px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 15px;
+      background: var(--white); color: var(--ink); transition: border-color 0.15s; outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--orange); }
+    .field { margin-bottom: 20px; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge-pending  { background: #fff8e1; color: #b45309; border: 1px solid #fde68a; }
+    .badge-progress { background: #e8f4fd; color: #1565c0; border: 1px solid #bfdbfe; }
+    .badge-done     { background: var(--green-dim); color: #0e7a3d; border: 1px solid #a7e9c1; }
+    .badge-paid     { background: #f3f0ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--muted); }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; }
+
+    /* ── BOTTOM TAB BAR (mobile) ── */
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 8px 4px calc(8px + env(safe-area-inset-bottom));
+      z-index: 100;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .bottom-nav a {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      color: var(--muted); text-decoration: none; font-size: 10px; font-weight: 600;
+      padding: 4px 10px; border-radius: var(--radius-sm);
+    }
+    .bottom-nav a.active { color: var(--orange); }
+    .bottom-nav a svg { width: 21px; height: 21px; }
+    .bottom-nav a .bn-post {
+      width: 44px; height: 44px; border-radius: 999px;
+      background: var(--ink); color: white;
+      display: flex; align-items: center; justify-content: center;
+      margin-top: -22px; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+    }
+    .bottom-nav a .bn-post svg { width: 20px; height: 20px; }
+
+    @media (max-width: 700px) {
+      nav.topnav { padding: 0 16px; }
+      .nav-links a:not(.notif-bell):not(.btn-nav) { display: none; }
+      footer { padding: 24px 16px; }
+      .bottom-nav { display: flex; }
+      body { padding-bottom: 64px; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="{% url 'landing_page' %}" class="nav-brand">
+    <div class="logo-box">M8</div>
+    <span>Errand<em>M8</em></span>
+  </a>
+  <div class="nav-links">
+    <a href="{% url 'landing_page' %}">Home</a>
+    <a href="{% url 'about' %}">About</a>
+    <a href="{% url 'contact' %}">Contact</a>
+    {% if user.is_authenticated %}
+      {% if user.profile.user_type == 'client' %}
+        <a href="{% url 'client_dashboard' %}">Dashboard</a>
+      {% else %}
+        <a href="{% url 'concierge_dashboard' %}">Dashboard</a>
+      {% endif %}
+      <a href="{% url 'profile' %}" style="color:rgba(255,255,255,0.6);">{{ user.username }}</a>
+      <a href="{% url 'notifications' %}" class="notif-bell" title="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        {% if unread and unread > 0 %}
+          <span class="notif-badge">{{ unread }}</span>
+        {% endif %}
+      </a>
+      <form method="post" action="{% url 'logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-nav">Log out</button>
+      </form>
+    {% else %}
+      <a href="{% url 'login' %}">Log in</a>
+      <a href="{% url 'signup' %}" class="btn-nav">Sign up</a>
+    {% endif %}
+  </div>
+</nav>
+
+{% if messages %}
+<div class="messages-wrap">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<footer>
+  <span class="brand-f">Errand<em>M8</em></span>
+  <span>© 2026 ErrandM8. Built for Nairobi.</span>
+  <div>
+    <a href="{% url 'terms_and_conditions' %}">Terms</a>
+    <a href="{% url 'privacy_policy' %}">Privacy</a>
+    <a href="{% url 'contact' %}">Contact</a>
+  </div>
+</footer>
+
+{% if user.is_authenticated %}
+<div class="bottom-nav">
+  <a href="{% url 'landing_page' %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+    Home
+  </a>
+  {% if user.profile.user_type == 'client' %}
+    <a href="{% url 'client_dashboard' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Errands
+    </a>
+    <a href="{% url 'post_task' %}"><span class="bn-post"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></a>
+  {% else %}
+    <a href="{% url 'concierge_dashboard' %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Jobs
+    </a>
+    <span class="bn-post" style="opacity:0.3;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+  {% endif %}
+  <a href="{% url 'notifications' %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    Alerts
+  </a>
+  <a href="{% url 'profile' %}">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </a>
+</div>
+{% endif %}
+
+</body>
+</html>

@@ -1,12 +1,16 @@
 # Environment variables - NEVER commit this
 .env
-# Virtual environment - NEVER commit this
+
+# Virtual environments
 venv/
+.venv/
+.venv-1/
+
 # Python
 __pycache__/
 *.py[cod]
 *.pyo
-venv/
+*.pyd
 *.egg-info/
 
 # Django
@@ -14,9 +18,9 @@ db.sqlite3
 staticfiles/
 media/
 
-# IDE
+# IDEs
 .idea/
 .vscode/
 
-# Node
+# Node (if you use it)
 node_modules/
