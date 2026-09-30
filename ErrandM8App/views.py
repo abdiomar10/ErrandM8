@@ -1,4 +1,7 @@
 import json
+import hashlib
+import hmac
+import math
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
@@ -6,13 +9,17 @@ from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages as django_messages
+from django.core.cache import cache
 from django.core.mail import send_mail
+from django.db.models import Count
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.conf import settings
+from django.core.paginator import Paginator
+from django.db.models import Prefetch
 
 from .forms import (
     CustomUserCreationForm, CustomAuthenticationForm,
@@ -23,26 +30,14 @@ from .models import Profile, Task, Review, PriceCounter, Notification, ChatMessa
 from .sms import send_otp, send_sms
 
 
-# ─────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────
-
 def _notify(recipient, notif_type, message, task=None):
     Notification.objects.create(
         recipient=recipient, notif_type=notif_type,
         message=message, task=task,
     )
 
-def _unread_count(user):
-    if user.is_authenticated:
-        try:
-            return user.notifications.filter(is_read=False).count()
-        except Exception:
-            return 0
-    return 0
-
 def _ctx(request, extra=None):
-    ctx = {'unread': _unread_count(request.user)}
+    ctx = {}
     if extra:
         ctx.update(extra)
     return ctx
@@ -64,14 +59,58 @@ def _sms_if_phone(user, message):
         pass
 
 
-# ─────────────────────────────────────────────
-# Public pages
-# ─────────────────────────────────────────────
+def _client_ip(request):
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
+
+def _login_failure_keys(request):
+    secret = settings.SECRET_KEY.encode()
+    ip_digest = hmac.new(secret, _client_ip(request).encode(), hashlib.sha256).hexdigest()
+    keys = {f'login_failures:ip:{ip_digest}': 100}
+    username = request.POST.get('username', '').strip().casefold()
+    if username:
+        user_digest = hmac.new(secret, username.encode(), hashlib.sha256).hexdigest()
+        keys[f'login_failures:user:{user_digest}'] = 5
+    return keys
+
+
+def _login_locked_out(keys):
+    return any(cache.get(key, 0) >= limit for key, limit in keys.items())
+
 
 def landing_page(request):
     if request.user.is_authenticated:
         return _dashboard_redirect(request.user)
-    return render(request, 'ErrandM8App/Landing_page.html', _ctx(request))
+
+    category_lookup = {key: value for key, value in Task.CATEGORY_CHOICES}
+    icon_lookup = {
+        'delivery': '📦',
+        'shopping': '🛒',
+        'babysitting': '🧸',
+        'pickup': '🚗',
+        'document': '📄',
+        'cleaning': '🧼',
+        'cooking': '🍽️',
+        'laundry': '🧺',
+        'errands': '✅',
+        'other': '✨',
+    }
+
+    category_counts = Task.objects.filter(status='Pending').values(
+        'category'
+    ).annotate(task_count=Count('id')).order_by('-task_count')[:5]
+
+    popular_categories = [
+        {
+            'category': row['category'],
+            'name': category_lookup.get(row['category'], row['category'].title()),
+            'count': row['task_count'],
+            'icon': icon_lookup.get(row['category'], '✨'),
+        }
+        for row in category_counts
+    ]
+
+    return render(request, 'ErrandM8App/Landing_page.html', _ctx(request, {'popular_categories': popular_categories}))
 
 def about(request):
     return render(request, 'ErrandM8App/About.html', _ctx(request))
@@ -88,10 +127,6 @@ def privacy_policy(request):
 def csrf_failure(request, reason=''):
     return render(request, 'ErrandM8App/csrf_failure.html', {'reason': reason}, status=403)
 
-
-# ─────────────────────────────────────────────
-# Signup + OTP
-# ─────────────────────────────────────────────
 
 def signup(request):
     if request.user.is_authenticated:
@@ -131,21 +166,24 @@ def verify_otp(request):
 
     if request.method == 'POST':
         if request.POST.get('resend'):
-            otp = user.profile.generate_otp()
-            send_otp(user.profile.phone_number, otp)
-            django_messages.info(request, 'New code sent.')
+            profile = user.profile
+            if profile.otp_created_at and (timezone.now() - profile.otp_created_at).total_seconds() < 60:
+                django_messages.warning(request, 'Please wait 60 seconds before requesting another code.')
+            else:
+                otp = profile.generate_otp()
+                send_otp(profile.phone_number, otp)
+                django_messages.info(request, 'New code sent.')
             return redirect('verify_otp')
 
         form = OTPForm(request.POST)
         if form.is_valid():
             code = form.cleaned_data['otp']
-            if user.profile.otp_valid(code):
+            if user.profile.verify_otp(code):
                 user.profile.phone_verified = True
-                user.profile.otp_code = ''
-                user.profile.save(update_fields=['phone_verified', 'otp_code'])
+                user.profile.save(update_fields=['phone_verified'])
                 auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 del request.session['pending_user_id']
-                django_messages.success(request, f'Welcome to ErrandM8, {user.username}! 🎉')
+                django_messages.success(request, f'Welcome to ErrandM8, {user.username}!')
                 return _dashboard_redirect(user)
             django_messages.error(request, 'Invalid or expired code.')
     else:
@@ -158,40 +196,58 @@ def verify_otp(request):
     }))
 
 
+@require_POST
 def resend_otp(request):
-    user_id = request.session.get('pending_user_id') or (
-        request.user.id if request.user.is_authenticated else None
-    )
+    user_id = request.session.get('pending_user_id')
     if not user_id:
         return redirect('signup')
     user = get_object_or_404(User, id=user_id)
-    otp = user.profile.generate_otp()
-    send_otp(user.profile.phone_number, otp)
+    profile = user.profile
+    if profile.otp_created_at and (timezone.now() - profile.otp_created_at).total_seconds() < 60:
+        django_messages.warning(request, 'Please wait 60 seconds before requesting another code.')
+        return redirect('verify_otp')
+    otp = profile.generate_otp()
+    send_otp(profile.phone_number, otp)
     django_messages.info(request, 'A new code has been sent.')
     return redirect('verify_otp')
 
-
-# ─────────────────────────────────────────────
-# Login + 2FA
-# ─────────────────────────────────────────────
 
 def login(request):
     if request.user.is_authenticated:
         return _dashboard_redirect(request.user)
 
+    failure_keys = _login_failure_keys(request)
+    if _login_locked_out(failure_keys):
+        django_messages.error(request, 'Too many failed login attempts. Please wait 10 minutes and try again.')
+        return render(request, 'ErrandM8App/Login.html', _ctx(request, {'form': CustomAuthenticationForm()}))
+
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
+            cache.delete_many(failure_keys)
             user = form.get_user()
             if user.profile.two_fa_enabled and user.profile.phone_verified:
-                otp = user.profile.generate_otp()
-                send_otp(user.profile.phone_number, otp)
+                profile = user.profile
+                if not profile.otp_created_at or (timezone.now() - profile.otp_created_at).total_seconds() >= 60:
+                    otp = profile.generate_otp()
+                    send_otp(profile.phone_number, otp)
                 request.session['twofa_user_id'] = user.id
                 django_messages.info(request, f'Code sent to {user.profile.phone_number}.')
                 return redirect('two_fa_verify')
             auth_login(request, user)
             return _dashboard_redirect(user)
-        django_messages.error(request, 'Invalid username or password.')
+
+        for key in failure_keys:
+            if not cache.add(key, 1, timeout=600):
+                cache.incr(key)
+        remaining_attempts = min(
+            limit - cache.get(key, 0)
+            for key, limit in failure_keys.items()
+        )
+        if remaining_attempts <= 0:
+            django_messages.error(request, 'Too many failed login attempts. Please wait 10 minutes and try again.')
+        else:
+            django_messages.error(request, f'Invalid username or password. {remaining_attempts} attempts remaining before lockout.')
     else:
         form = CustomAuthenticationForm()
 
@@ -208,9 +264,7 @@ def two_fa_verify(request):
     if request.method == 'POST':
         form = OTPForm(request.POST)
         if form.is_valid():
-            if user.profile.otp_valid(form.cleaned_data['otp']):
-                user.profile.otp_code = ''
-                user.profile.save(update_fields=['otp_code'])
+            if user.profile.verify_otp(form.cleaned_data['otp']):
                 auth_login(request, user, backend='django.contrib.auth.backends.ModelBackend')
                 del request.session['twofa_user_id']
                 return _dashboard_redirect(user)
@@ -225,14 +279,11 @@ def two_fa_verify(request):
 
 
 @login_required
+@require_POST
 def logout_view(request):
     auth_logout(request)
     return redirect('landing_page')
 
-
-# ─────────────────────────────────────────────
-# 2FA toggle
-# ─────────────────────────────────────────────
 
 @login_required
 @require_POST
@@ -248,10 +299,6 @@ def toggle_two_fa(request):
     return redirect('profile')
 
 
-# ─────────────────────────────────────────────
-# Password reset
-# ─────────────────────────────────────────────
-
 def password_reset(request):
     if request.method == 'POST':
         form = PasswordResetForm(request.POST)
@@ -263,7 +310,7 @@ def password_reset(request):
                 reset_url = request.build_absolute_uri(f'/reset/{uid}/{token}/')
                 send_mail(
                     'Reset your ErrandM8 password',
-                    f'Hi {user.username},\n\nReset your password:\n{reset_url}\n\n— ErrandM8',
+                    f'Hi {user.username},\n\nReset your password:\n{reset_url}\n\n- ErrandM8',
                     settings.DEFAULT_FROM_EMAIL,
                     [user.email],
                 )
@@ -300,10 +347,6 @@ def password_reset_complete(request):
     return render(request, 'ErrandM8App/Password_reset_complete.html')
 
 
-# ─────────────────────────────────────────────
-# Location
-# ─────────────────────────────────────────────
-
 @login_required
 @require_POST
 def update_location(request):
@@ -311,10 +354,14 @@ def update_location(request):
         data = json.loads(request.body)
         lat  = float(data['latitude'])
         lng  = float(data['longitude'])
-    except Exception:
+        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+            raise ValueError('Coordinates are out of range.')
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
         return JsonResponse({'error': 'bad payload'}, status=400)
 
     p = request.user.profile
+    if p.user_type != 'concierge':
+        return JsonResponse({'error': 'forbidden'}, status=403)
     p.latitude = lat
     p.longitude = lng
     p.location_updated_at = timezone.now()
@@ -322,10 +369,6 @@ def update_location(request):
     p.save(update_fields=['latitude', 'longitude', 'location_updated_at', 'is_online'])
     return JsonResponse({'status': 'ok'})
 
-
-# ─────────────────────────────────────────────
-# Notifications
-# ─────────────────────────────────────────────
 
 @login_required
 def notifications(request):
@@ -342,10 +385,6 @@ def mark_notification_read(request, notif_id):
     n.save()
     return JsonResponse({'status': 'ok'})
 
-
-# ─────────────────────────────────────────────
-# Profile
-# ─────────────────────────────────────────────
 
 @login_required
 def profile_view(request, username=None):
@@ -375,23 +414,29 @@ def profile_view(request, username=None):
     }))
 
 
-# ─────────────────────────────────────────────
-# Dashboards
-# ─────────────────────────────────────────────
-
 @login_required
 def client_dashboard(request):
-    Profile.objects.get_or_create(user=request.user)
-    tasks = Task.objects.filter(client=request.user).order_by('-created_at')
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if profile.user_type != 'client':
+        return redirect('concierge_dashboard')
+    tasks = Task.objects.filter(client=request.user).select_related(
+        'concierge', 'review'
+    ).prefetch_related(
+        Prefetch(
+            'counters',
+            queryset=PriceCounter.objects.select_related('proposed_by').order_by('-created_at'),
+            to_attr='dashboard_counters',
+        )
+    )
 
-    for task in tasks:
+    page_obj = Paginator(tasks, 20).get_page(request.GET.get('page'))
+    for task in page_obj:
         task.can_review = (
             task.status == 'Paid'
             and task.concierge is not None
-            and not Review.objects.filter(task=task, reviewer=request.user).exists()
+            and not getattr(task, 'review', None)
         )
-        task.latest_counter = task.counters.order_by('-created_at').first()
-        # Suggested fair price = midpoint of client budget and concierge's offer
+        task.latest_counter = task.dashboard_counters[0] if task.dashboard_counters else None
         if task.client_budget and task.proposed_price:
             task.suggested_price = round(
                 (float(task.client_budget) + float(task.proposed_price)) / 2
@@ -399,18 +444,23 @@ def client_dashboard(request):
         else:
             task.suggested_price = None
 
-    return render(request, 'ErrandM8App/Client_dashboard.html', _ctx(request, {'tasks': tasks}))
+    return render(request, 'ErrandM8App/Client_dashboard.html', _ctx(request, {
+        'tasks': page_obj,
+        'page_obj': page_obj,
+    }))
 
 
 @login_required
 def concierge_dashboard(request):
     profile, _ = Profile.objects.get_or_create(user=request.user)
+    if profile.user_type != 'concierge':
+        return redirect('client_dashboard')
 
     tasks_pending   = Task.nearby_pending(profile, radius_km=3)
     tasks_accepted  = Task.objects.filter(concierge=request.user, status='In Progress')
     tasks_completed = Task.objects.filter(concierge=request.user, status__in=['Completed', 'Paid'])
 
-    return render(request, 'ErrandM8App/concierge_dashboard.html', _ctx(request, {
+    return render(request, 'ErrandM8App/Concierge_dashboard.html', _ctx(request, {
         'tasks_pending':   tasks_pending,
         'tasks_accepted':  tasks_accepted,
         'tasks_completed': tasks_completed,
@@ -420,23 +470,31 @@ def concierge_dashboard(request):
     }))
 
 
-# ─────────────────────────────────────────────
-# Errand lifecycle
-# ─────────────────────────────────────────────
-
 @login_required
 def post_task(request):
+    if request.user.profile.user_type != 'client':
+        django_messages.error(request, 'Only clients can post errands.')
+        return redirect('concierge_dashboard')
+
     if request.method == 'POST':
         form = TaskForm(request.POST)
         if form.is_valid():
             task = form.save(commit=False)
             task.client = request.user
-            # Save GPS coords from hidden fields (set by Leaflet map)
             lat = request.POST.get('pickup_latitude')
             lng = request.POST.get('pickup_longitude')
-            if lat:
-                task.pickup_latitude  = float(lat)
-                task.pickup_longitude = float(lng)
+            if lat or lng:
+                try:
+                    latitude = float(lat)
+                    longitude = float(lng)
+                except (TypeError, ValueError):
+                    form.add_error(None, 'We could not validate the pickup coordinates. Please try again.')
+                    return render(request, 'ErrandM8App/Post_task.html', _ctx(request, {'form': form}), status=400)
+                if not (math.isfinite(latitude) and math.isfinite(longitude) and -90 <= latitude <= 90 and -180 <= longitude <= 180):
+                    form.add_error(None, 'Pickup coordinates are out of range. Please try again.')
+                    return render(request, 'ErrandM8App/Post_task.html', _ctx(request, {'form': form}), status=400)
+                task.pickup_latitude = latitude
+                task.pickup_longitude = longitude
             task.save()
             django_messages.success(request, 'Errand posted! Nearby concierges will be notified.')
             return redirect('client_dashboard')
@@ -457,10 +515,8 @@ def task_detail(request, task_id):
     counters      = task.counters.select_related('proposed_by').all()
     review        = getattr(task, 'review', None)
 
-    # Mark incoming chat as read
     task.messages.exclude(sender=request.user).update(is_read=True)
 
-    # Handle chat form submit
     if request.method == 'POST' and request.POST.get('chat_body'):
         body = request.POST['chat_body'].strip()
         if body:
@@ -470,18 +526,23 @@ def task_detail(request, task_id):
                 _notify(other, 'chat_message', f'{request.user.username}: {body[:80]}', task=task)
             return redirect('task_detail', task_id=task_id)
 
+    task_participant_ids = [task.client_id, task.concierge_id] if task.concierge_id else [task.client_id]
+
     return render(request, 'ErrandM8App/Task_detail.html', _ctx(request, {
         'task':          task,
         'chat_messages': chat_messages,
         'counters':      counters,
         'review':        review,
+        'task_participant_ids': task_participant_ids,
     }))
 
 
 @login_required
 def set_price(request, task_id):
-    """Concierge proposes a price for a pending errand."""
     task = get_object_or_404(Task, id=task_id, status='Pending')
+    if request.user.profile.user_type != 'concierge':
+        django_messages.error(request, 'Only concierges can propose a price.')
+        return redirect('client_dashboard')
 
     if request.method == 'POST':
         form = PriceCounterForm(request.POST)
@@ -491,7 +552,6 @@ def set_price(request, task_id):
             counter.proposed_by = request.user
             counter.save()
 
-            # Update task with concierge and proposed price
             task.concierge      = request.user
             task.proposed_price = counter.amount
             task.save(update_fields=['concierge', 'proposed_price'])
@@ -505,7 +565,7 @@ def set_price(request, task_id):
                 task.client,
                 f'ErrandM8: {request.user.username} proposed KSh {counter.amount} for "{task.title}". Log in to accept.',
             )
-            django_messages.success(request, 'Price submitted — waiting for the client.')
+            django_messages.success(request, 'Price submitted - waiting for the client.')
             return redirect('concierge_dashboard')
     else:
         form = PriceCounterForm()
@@ -517,7 +577,6 @@ def set_price(request, task_id):
 
 @login_required
 def counter_price(request, task_id):
-    """Client makes a counter-offer to the concierge."""
     task = get_object_or_404(Task, id=task_id)
 
     if request.user != task.client:
@@ -553,8 +612,8 @@ def counter_price(request, task_id):
 
 
 @login_required
+@require_POST
 def accept_task(request, task_id, action):
-    """Client accepts or declines the concierge's price."""
     task = get_object_or_404(Task, id=task_id)
 
     if request.user != task.client:
@@ -562,7 +621,6 @@ def accept_task(request, task_id, action):
         return redirect('client_dashboard')
 
     if action == 'accept' and task.concierge:
-        # Mark latest pending counter as accepted
         latest = task.counters.filter(is_accepted=None).order_by('-created_at').first()
         if latest:
             latest.is_accepted = True
@@ -575,7 +633,7 @@ def accept_task(request, task_id, action):
             task=task,
         )
         _sms_if_phone(task.concierge, f'ErrandM8: Your price was accepted for "{task.title}". Get started!')
-        django_messages.success(request, 'Errand accepted — the concierge has been notified.')
+        django_messages.success(request, 'Errand accepted - the concierge has been notified.')
 
     elif action == 'decline':
         latest = task.counters.filter(is_accepted=None).order_by('-created_at').first()
@@ -598,6 +656,7 @@ def accept_task(request, task_id, action):
 
 
 @login_required
+@require_POST
 def complete_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, status='In Progress')
 
@@ -617,11 +676,12 @@ def complete_task(request, task_id):
         task.client,
         f'ErrandM8: "{task.title}" is complete. Please pay the concierge KSh {task.proposed_price}.',
     )
-    django_messages.success(request, 'Marked complete — waiting for client payment.')
+    django_messages.success(request, 'Marked complete - waiting for client payment.')
     return redirect('concierge_dashboard')
 
 
 @login_required
+@require_POST
 def pay_concierge(request, task_id):
     task = get_object_or_404(Task, id=task_id, status='Completed')
 
@@ -632,7 +692,6 @@ def pay_concierge(request, task_id):
     task.status = 'Paid'
     task.save(update_fields=['status'])
 
-    # Update concierge earnings
     if task.concierge:
         p = task.concierge.profile
         p.jobs_completed += 1
@@ -654,6 +713,7 @@ def pay_concierge(request, task_id):
 
 
 @login_required
+@require_POST
 def cancel_task(request, task_id):
     task = get_object_or_404(Task, id=task_id)
 
@@ -700,7 +760,7 @@ def leave_review(request, task_id):
             review.save()
             _notify(
                 task.concierge, 'review_received',
-                f'{request.user.username} left you a {review.score}★ review.',
+                f'{request.user.username} left you a {review.score} review.',
                 task=task,
             )
             django_messages.success(request, 'Review submitted. Thank you!')
@@ -712,10 +772,6 @@ def leave_review(request, task_id):
         'form': form, 'task': task,
     }))
 
-
-# ─────────────────────────────────────────────
-# Chat (AJAX)
-# ─────────────────────────────────────────────
 
 @login_required
 @require_POST

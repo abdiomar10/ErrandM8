@@ -1,19 +1,28 @@
-DEBUG = True
 import os
 from pathlib import Path
-import logging
-logging.basicConfig(level=logging.DEBUG)
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-before-production')
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+if DEBUG:
+    SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-change-me-before-production')
+else:
+    SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+    if not SECRET_KEY:
+        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DEBUG is disabled.')
 
 # Explicitly disable SSL redirect — overridden to True in production block below
 SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = None
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1').split()
+ALLOWED_HOSTS = os.environ.get(
+    'DJANGO_ALLOWED_HOSTS',
+    'localhost 127.0.0.1' if DEBUG else '',
+).split()
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ImproperlyConfigured('DJANGO_ALLOWED_HOSTS must be set when DEBUG is disabled.')
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS
     if h not in ('localhost', '127.0.0.1')
@@ -30,7 +39,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    # 'django.middleware.security.SecurityMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -61,12 +70,43 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'ErrandM8.wsgi.application'
 
-DATABASES = {
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    import dj_database_url
+
+    DATABASES = {
+        'default': dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=60,
+            conn_health_checks=True,
+            ssl_require=not DEBUG,
+        ),
+    }
+    if not DEBUG and DATABASES['default']['ENGINE'] != 'django.db.backends.postgresql':
+        raise ImproperlyConfigured('Production DATABASE_URL must use PostgreSQL.')
+elif DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    raise ImproperlyConfigured('DATABASE_URL must be set when DEBUG is disabled.')
+
+CACHES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache',
     }
 }
+if DEBUG:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'errandm8-local',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -118,9 +158,15 @@ if not DEBUG:
     X_FRAME_OPTIONS                = 'DENY'
     SECURE_HSTS_SECONDS            = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD            = True
+    SECURE_REFERRER_POLICY        = 'same-origin'
+    SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
     SESSION_COOKIE_SECURE          = True
     CSRF_COOKIE_SECURE             = True
 
 SESSION_COOKIE_AGE         = 60 * 60 * 24 * 30
+SESSION_COOKIE_HTTPONLY    = True
+SESSION_COOKIE_SAMESITE    = 'Lax'
 SESSION_SAVE_EVERY_REQUEST = True
-TEMPLATE_DEBUG = True
+CSRF_COOKIE_SAMESITE       = 'Lax'
+TEMPLATE_DEBUG = DEBUG

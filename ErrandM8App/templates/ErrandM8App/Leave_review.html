@@ -1,0 +1,65 @@
+{% extends "ErrandM8App/Base.html" %}
+
+{% block title %}Rate your concierge — ErrandM8{% endblock %}
+
+{% block extra_head %}
+<style>
+  .center-form { max-width: 520px; margin: 80px auto; padding: 0 24px; }
+  .center-form h1 { font-family: var(--font-head); font-size: 28px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+  .center-form p.sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+  .task-summary { background: var(--cream); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 28px; font-size: 14px; }
+  .task-summary strong { font-family: var(--font-head); font-size: 16px; display: block; margin-bottom: 4px; }
+  .star-choices { display: flex; gap: 10px; justify-content: center; margin: 8px 0 4px; }
+  .star-choices label { cursor: pointer; font-size: 32px; color: var(--border); transition: color 0.15s; }
+  .star-choices input { display: none; }
+  .star-choices input:checked ~ label,
+  .star-choices label:has(~ input:checked) { color: #fbbf24; }
+  .star-choices label:hover,
+  .star-choices label:hover ~ label { color: #fbbf24; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="center-form">
+  <h1>Rate your concierge</h1>
+  <p class="sub">Let others know how it went.</p>
+
+  <div class="task-summary">
+    <strong>{{ task.title }}</strong>
+    <span style="color:var(--muted);">{{ task.location_from }} → {{ task.location_to }}</span>
+    {% if task.concierge %}
+      <div style="margin-top:6px;color:var(--muted);">Concierge: {{ task.concierge.username }}</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="field">
+        <label class="label">Rating</label>
+        <div style="display:flex;gap:16px;justify-content:center;font-size:28px;margin:10px 0 16px;">
+          {% for radio in form.score %}
+            <label style="cursor:pointer;">
+              {{ radio.tag }}
+              <span>{{ radio.choice_label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if form.score.errors %}<p style="color:#e53e3e;font-size:13px;">{{ form.score.errors|join:", " }}</p>{% endif %}
+      </div>
+
+      <div class="field">
+        <label class="label">Comment (optional)</label>
+        {{ form.comment }}
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg">Submit review</button>
+    </form>
+  </div>
+
+  <div style="text-align:center;margin-top:16px;">
+    <a href="{% url 'client_dashboard' %}" class="btn btn-ghost btn-sm">← Back to dashboard</a>
+  </div>
+</div>
+{% endblock %}

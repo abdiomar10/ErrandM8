@@ -138,6 +138,131 @@
   .stat-label { font-size: 13px; color: var(--muted); }
 
   /* How it works */
+  .popular-services {
+    padding: 100px 80px 20px;
+    max-inline-size: 1100px;
+    margin: 0 auto;
+  }
+  .experience {
+    padding: 36px 80px 0;
+    max-inline-size: 1120px;
+    margin: 0 auto;
+  }
+  .experience-panel {
+    background: linear-gradient(135deg, #fff8f2, #fff);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 52px 40px;
+    display: grid;
+    grid-template-columns: 1.1fr 1.9fr;
+    gap: 32px;
+    align-items: center;
+  }
+  .experience-copy h2 {
+    font-family: var(--font-head);
+    font-size: clamp(32px, 4vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin: 0 0 18px;
+    color: var(--ink);
+  }
+  .experience-copy p {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin: 0;
+    max-inline-size: 440px;
+  }
+  .experience-points {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .experience-point {
+    background: rgba(255,255,255,0.7);
+    border: 1px solid rgba(17,24,39,0.06);
+    border-radius: 18px;
+    padding: 22px 18px;
+  }
+  .experience-point .icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    background: rgba(244, 123, 32, 0.12);
+    font-size: 20px;
+    margin-block-end: 12px;
+  }
+  .experience-point h3 {
+    font-family: var(--font-head);
+    font-size: 18px;
+    margin: 0 0 8px;
+  }
+  .experience-point p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--muted);
+  }
+  .section-head {
+    text-align: center;
+    margin-block-end: 28px;
+  }
+  .section-head .eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-block-end: 14px;
+  }
+  .section-head h2 {
+    font-family: var(--font-head);
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin: 0;
+  }
+  .service-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 18px;
+    margin-block-start: 32px;
+  }
+  .service-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px 18px;
+    box-shadow: 0 10px 25px rgba(17, 24, 39, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .service-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 26px rgba(17, 24, 39, 0.08);
+  }
+  .service-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    background: rgba(244, 123, 32, 0.12);
+    display: grid;
+    place-items: center;
+    font-size: 24px;
+    margin-block-end: 18px;
+  }
+  .service-card h3 {
+    font-family: var(--font-head);
+    font-size: 18px;
+    font-weight: 700;
+    margin-block-end: 8px;
+  }
+  .service-card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+  }
   .how {
     padding: 100px 80px;
     max-inline-size: 1100px;
@@ -199,15 +324,26 @@
   }
   .cta-bottom p { color: rgba(255,255,255,0.75); font-size: 16px; margin-block-end: 36px; }
 
-  @media (max-inline-size: 768px) {
+  @media (max-width: 768px) {
     .hero { grid-template-columns: 1fr; }
     .hero-right { display: none; }
     .hero-left { padding: 60px 24px; }
     .stats { flex-direction: column; }
     .stat { border-inline-end: none; border-block-end: 1px solid var(--border); padding: 24px; }
+    .popular-services { padding: 72px 24px 16px; }
+    .service-grid { grid-template-columns: 1fr 1fr; }
+    .experience { padding: 24px 24px 0; }
+    .experience-panel { grid-template-columns: 1fr; padding: 36px 24px; }
+    .experience-points { grid-template-columns: 1fr 1fr; }
     .how { padding: 60px 24px; }
     .steps { grid-template-columns: 1fr; }
     .cta-bottom { padding: 60px 24px; }
+  }
+
+  @media (max-width: 540px) {
+    .service-grid { grid-template-columns: 1fr; }
+    .experience-points { grid-template-columns: 1fr; }
+    .section-head h2 { font-size: 32px; }
   }
 </style>
 {% endblock %}
@@ -227,9 +363,9 @@
   </div>
   <div class="hero-right">
     <div class="hero-card">
-      <p class="hero-card-tag">Live nearby</p>
-      <h3>Available errands</h3>
-      <p>concierge see jobs within 3km of their location</p>
+      <p class="hero-card-tag">A local example</p>
+      <h3>Errands, matched nearby</h3>
+      <p>Illustrative requests — concierges see eligible errands within 3km.</p>
       <div class="hero-card-row">
         <div class="dot dot-orange"></div>
         Grocery run — Westlands
@@ -256,14 +392,64 @@
     <div class="stat-label">Max concierge radius</div>
   </div>
   <div class="stat">
-    <div class="stat-num">&lt;15min</div>
-    <div class="stat-label">Average response time</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">5 types</div>
+    <div class="stat-num">10 types</div>
     <div class="stat-label">Errand categories</div>
   </div>
+  <div class="stat">
+    <div class="stat-num">3 steps</div>
+    <div class="stat-label">From post to done</div>
+  </div>
 </div>
+
+<section class="popular-services">
+  <div class="section-head">
+    <p class="eyebrow">What people need most</p>
+    <h2>Popular errand categories</h2>
+  </div>
+  <div class="service-grid">
+    {% for category in popular_categories %}
+      <article class="service-card">
+        <div class="service-icon">{{ category.icon }}</div>
+        <h3>{{ category.name }}</h3>
+        <p>{{ category.count }} open request{{ category.count|pluralize }}</p>
+      </article>
+    {% empty %}
+      <p>No open requests at the moment. Post an errand and invite a local concierge to help.</p>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="experience">
+  <div class="experience-panel">
+    <div class="experience-copy">
+      <p class="hero-eyebrow" style="margin-bottom: 16px;">Why people use ErrandM8</p>
+      <h2>Local help without the stress.</h2>
+      <p>From shopping runs to urgent document drops, ErrandM8 helps clients move faster while giving concierges reliable nearby work. No confusing middlemen, no wasted time.</p>
+    </div>
+    <div class="experience-points">
+      <div class="experience-point">
+        <div class="icon">⚡</div>
+        <h3>Fast matching</h3>
+        <p>Jobs appear close to nearby concierge so requests are handled quickly.</p>
+      </div>
+      <div class="experience-point">
+        <div class="icon">💬</div>
+        <h3>Clear communication</h3>
+        <p>Discuss price, timing, and details before the task is accepted.</p>
+      </div>
+      <div class="experience-point">
+        <div class="icon">🔒</div>
+        <h3>Accountable service</h3>
+        <p>Ratings and reviews help everyone stay transparent and trustworthy.</p>
+      </div>
+      <div class="experience-point">
+        <div class="icon">📍</div>
+        <h3>Built for Nairobi</h3>
+        <p>Designed around real local errands and nearby fulfillment.</p>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- How it works -->
 <section class="how">

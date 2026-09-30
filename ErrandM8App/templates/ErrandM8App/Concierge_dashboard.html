@@ -106,7 +106,7 @@
           {% endif %}
           <form method="post" action="{% url 'set_price' task.id %}" class="price-form">
             {% csrf_token %}
-            <input type="number" name="proposed_price" placeholder="Your price (KSh)" min="0" step="50" required>
+            <input type="number" name="amount" placeholder="Your price (KSh)" min="0" step="50" required>
             <button type="submit" class="btn btn-primary btn-sm">Propose price</button>
           </form>
         </div>

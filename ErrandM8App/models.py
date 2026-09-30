@@ -1,7 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-import math, random, string
+import hmac
+import hashlib
+import math
+import secrets
+import string
+
+from django.conf import settings
+from django.db import transaction
 
 
 def haversine_distance(lat1, lon1, lat2, lon2):
@@ -14,7 +21,7 @@ def haversine_distance(lat1, lon1, lat2, lon2):
 
 
 def _otp():
-    return ''.join(random.choices(string.digits, k=6))
+    return ''.join(secrets.choice(string.digits) for _ in range(6))
 
 
 class Profile(models.Model):
@@ -30,8 +37,9 @@ class Profile(models.Model):
     avatar              = models.ImageField(upload_to='avatars/', null=True, blank=True)
 
     phone_verified      = models.BooleanField(default=False)
-    otp_code            = models.CharField(max_length=6, blank=True)
+    otp_code            = models.CharField(max_length=64, blank=True)
     otp_created_at      = models.DateTimeField(null=True, blank=True)
+    otp_attempts        = models.PositiveSmallIntegerField(default=0)
     two_fa_enabled      = models.BooleanField(default=False)
 
     latitude            = models.FloatField(null=True, blank=True)
@@ -49,16 +57,48 @@ class Profile(models.Model):
         return f'{self.user.username} ({self.display_role})'
 
     def generate_otp(self):
-        self.otp_code = _otp()
+        code = _otp()
+        self.otp_code = hmac.new(
+            settings.SECRET_KEY.encode(),
+            code.encode(),
+            hashlib.sha256,
+        ).hexdigest()
         self.otp_created_at = timezone.now()
-        self.save(update_fields=['otp_code', 'otp_created_at'])
-        return self.otp_code
+        self.otp_attempts = 0
+        self.save(update_fields=['otp_code', 'otp_created_at', 'otp_attempts'])
+        return code
 
-    def otp_valid(self, code):
-        if not self.otp_code or not self.otp_created_at:
+    def verify_otp(self, code):
+        with transaction.atomic():
+            profile = Profile.objects.select_for_update().get(pk=self.pk)
+            if (
+                not profile.otp_code
+                or not profile.otp_created_at
+                or (timezone.now() - profile.otp_created_at).total_seconds() >= 600
+                or profile.otp_attempts >= 5
+            ):
+                return False
+
+            digest = hmac.new(
+                settings.SECRET_KEY.encode(),
+                str(code).encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            if hmac.compare_digest(profile.otp_code, digest):
+                profile.otp_code = ''
+                profile.otp_attempts = 0
+                profile.save(update_fields=['otp_code', 'otp_attempts'])
+                self.otp_code = ''
+                self.otp_attempts = 0
+                return True
+
+            profile.otp_attempts += 1
+            if profile.otp_attempts >= 5:
+                profile.otp_code = ''
+            profile.save(update_fields=['otp_attempts', 'otp_code'])
+            self.otp_attempts = profile.otp_attempts
+            self.otp_code = profile.otp_code
             return False
-        expired = (timezone.now() - self.otp_created_at).seconds > 600
-        return (not expired) and (self.otp_code == code)
 
     def update_rating(self):
         from django.db.models import Avg
@@ -121,6 +161,20 @@ class Task(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(
+                fields=['status', 'category'],
+                name='task_pending_category_idx',
+            ),
+            models.Index(
+                fields=['status', 'pickup_latitude', 'pickup_longitude'],
+                name='task_nearby_idx',
+            ),
+            models.Index(
+                fields=['client', '-created_at'],
+                name='task_client_recent_idx',
+            ),
+        ]
 
     def __str__(self):
         return self.title
@@ -137,10 +191,40 @@ class Task(models.Model):
     @classmethod
     def nearby_pending(cls, concierge_profile, radius_km=3):
         pending = cls.objects.filter(status='Pending').select_related('client')
-        if concierge_profile.latitude is None:
+        if concierge_profile.latitude is None or concierge_profile.longitude is None:
             for t in pending:
                 t._distance = None
             return list(pending)
+
+        angular_distance = radius_km / 6371
+        latitude_delta = math.degrees(angular_distance)
+        min_latitude = max(-90, concierge_profile.latitude - latitude_delta)
+        max_latitude = min(90, concierge_profile.latitude + latitude_delta)
+        longitude_delta = min(
+            180,
+            math.degrees(angular_distance / max(math.cos(math.radians(concierge_profile.latitude)), 1e-12)),
+        )
+
+        if longitude_delta >= 180:
+            longitude_filter = models.Q()
+        else:
+            min_longitude = concierge_profile.longitude - longitude_delta
+            max_longitude = concierge_profile.longitude + longitude_delta
+            if min_longitude < -180:
+                longitude_filter = models.Q(pickup_longitude__gte=min_longitude + 360) | models.Q(pickup_longitude__lte=max_longitude)
+            elif max_longitude > 180:
+                longitude_filter = models.Q(pickup_longitude__gte=min_longitude) | models.Q(pickup_longitude__lte=max_longitude - 360)
+            else:
+                longitude_filter = models.Q(pickup_longitude__range=(min_longitude, max_longitude))
+
+        pending = pending.filter(
+            models.Q(pickup_latitude__isnull=True)
+            | models.Q(pickup_longitude__isnull=True)
+            | (
+                models.Q(pickup_latitude__range=(min_latitude, max_latitude))
+                & longitude_filter
+            )
+        )
         nearby = []
         for task in pending:
             dist = task.distance_to_concierge(concierge_profile)

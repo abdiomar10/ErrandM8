@@ -8,7 +8,7 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         users_without_profiles = User.objects.filter(profile__isnull=True)
         for user in users_without_profiles:
-            Profile.objects.create(user=user, role='client')  # Default to 'client' or set appropriate role
+            Profile.objects.create(user=user, user_type='client')  # Default to 'client' or set appropriate role
             self.stdout.write(self.style.SUCCESS(f'Created profile for user: {user.username}'))
 
         if not users_without_profiles:

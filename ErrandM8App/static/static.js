@@ -5,13 +5,13 @@
  * 2. On post_task form: fills hidden lat/lng inputs so the task gets coordinates.
  */
 
-// ── Runner dashboard: send location to /update_location/ ──────────────────
+// ── Runner dashboard: send location to /update-location/ ──────────────────
 function updateRunnerLocation() {
   if (!navigator.geolocation) return;
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      fetch('/update_location/', {
+      fetch('/update-location/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

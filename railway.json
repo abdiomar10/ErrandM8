@@ -4,7 +4,9 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "gunicorn Usend.wsgi --log-file -",
+    "startCommand": "gunicorn ErrandM8.wsgi --log-file -",
+    "preDeployCommand": "python manage.py migrate --noinput",
+    "preDeployTimeoutSeconds": 180,
     "restartPolicyType": "ON_FAILURE"
   }
 }
